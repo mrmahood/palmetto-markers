@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Bookmark, MapPin, Pause, Volume2 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
+import { SuggestPlate } from "@/components/suggest-plate";
 import { Button } from "@/components/ui/button";
 import {
   ERA_LABEL,
   getMarker,
-  heroImage,
-  imageCredit,
+  platesFor,
   inscription,
   spokenLesson,
   type Marker,
+  type Plate,
 } from "@/lib/markers";
+import { listAcceptedPlates } from "@/lib/sources";
 import { directionsUrl } from "@/lib/geo";
 import { playLesson, stopSpeaking, unlockSpeech } from "@/lib/speech";
 import { NARRATORS, getNarrator, type NarratorId } from "@/lib/voices";
@@ -19,6 +21,11 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
 export const Route = createFileRoute("/markers/$id")({ component: MarkerLesson });
+
+function mergePlates(accepted: Plate[], builtin: Plate[]): Plate[] {
+  const all = [...accepted, ...builtin];
+  return all.filter((p, i) => all.findIndex((x) => x.src === p.src) === i);
+}
 
 function MarkerLesson() {
   const { id } = Route.useParams();
@@ -29,8 +36,10 @@ function MarkerLesson() {
   const narrator = useAppStore((s) => s.narrator);
   const setNarrator = useAppStore((s) => s.setNarrator);
   const [marker, setMarker] = useState<Marker | undefined>();
+  const [accepted, setAccepted] = useState<Plate[]>([]);
   const [playing, setPlaying] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  const [hero, setHero] = useState(0);
 
   useEffect(() => {
     void load();
@@ -41,6 +50,13 @@ function MarkerLesson() {
     void getMarker(id).then((m) => {
       if (live) setMarker(m);
     });
+    void listAcceptedPlates({ data: id })
+      .then((rows) => {
+        if (live) setAccepted(rows);
+      })
+      .catch(() => {
+        if (live) setAccepted([]);
+      });
     return () => {
       live = false;
     };
@@ -51,6 +67,7 @@ function MarkerLesson() {
   }, [marker, markVisited]);
 
   useEffect(() => () => stopSpeaking(), []);
+  useEffect(() => setHero(0), [id]);
 
   if (!marker) {
     return (
@@ -63,6 +80,8 @@ function MarkerLesson() {
   const current = marker;
   const saved = favorites.includes(current.id);
   const text = inscription(current);
+  const plates = mergePlates(accepted, platesFor(current));
+  const plate = plates[hero] ?? plates[0];
 
   function toggleAudio() {
     unlockSpeech();
@@ -96,9 +115,9 @@ function MarkerLesson() {
     >
       <div className="relative">
         <img
-          src={heroImage(current)}
-          alt=""
-          className="h-64 w-full object-cover"
+          src={plate.src}
+          alt={plate.caption ?? ""}
+          className="h-64 w-full object-cover object-top"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
         <Link
@@ -206,8 +225,42 @@ function MarkerLesson() {
           Inscription from the South Carolina Historical Marker Program, South
           Carolina Department of Archives and History.
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-muted">{imageCredit(current)}</p>
       </article>
+
+      <section className="mt-8 px-4">
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+          Historical plate
+        </h2>
+        {plate.caption ? (
+          <p className="mt-2 text-sm leading-relaxed">{plate.caption}</p>
+        ) : null}
+        <p className="mt-1 text-xs leading-relaxed text-muted">{plate.credit}</p>
+        {!plate.exact ? (
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Related, not a photograph of this marker’s subject. We do not invent
+            faces or scenes.
+          </p>
+        ) : null}
+        {plates.length > 1 ? (
+          <ul className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {plates.map((p, i) => (
+              <li key={p.src}>
+                <button
+                  type="button"
+                  onClick={() => setHero(i)}
+                  className={cn(
+                    "size-16 overflow-hidden rounded-md border",
+                    i === hero ? "border-accent" : "border-border",
+                  )}
+                >
+                  <img src={p.src} alt="" className="size-full object-cover" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <SuggestPlate markerId={current.id} />
+      </section>
       <BottomNav />
     </main>
   );

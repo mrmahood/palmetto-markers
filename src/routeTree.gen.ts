@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ArRouteImport } from './routes/ar'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ReviewRouteImport } from './routes/review'
 import { Route as SavedRouteImport } from './routes/saved'
 import { Route as ToursRouteImport } from './routes/tours'
 import { Route as MarkersIdRouteImport } from './routes/markers.$id'
 import { Route as ToursIdRouteImport } from './routes/tours.$id'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -30,6 +33,16 @@ const ArRoute = ArRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SavedRoute = SavedRouteImport.update({
@@ -52,34 +65,48 @@ const ToursIdRoute = ToursIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ToursRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ar': typeof ArRoute
   '/explore': typeof ExploreRoute
+  '/login': typeof LoginRoute
+  '/review': typeof ReviewRoute
   '/saved': typeof SavedRoute
   '/tours': typeof ToursRouteWithChildren
   '/markers/$id': typeof MarkersIdRoute
   '/tours/$id': typeof ToursIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ar': typeof ArRoute
   '/explore': typeof ExploreRoute
+  '/login': typeof LoginRoute
+  '/review': typeof ReviewRoute
   '/saved': typeof SavedRoute
   '/tours': typeof ToursRouteWithChildren
   '/markers/$id': typeof MarkersIdRoute
   '/tours/$id': typeof ToursIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ar': typeof ArRoute
   '/explore': typeof ExploreRoute
+  '/login': typeof LoginRoute
+  '/review': typeof ReviewRoute
   '/saved': typeof SavedRoute
   '/tours': typeof ToursRouteWithChildren
   '/markers/$id': typeof MarkersIdRoute
   '/tours/$id': typeof ToursIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,37 +114,49 @@ export interface FileRouteTypes {
     | '/'
     | '/ar'
     | '/explore'
+    | '/login'
+    | '/review'
     | '/saved'
     | '/tours'
     | '/markers/$id'
     | '/tours/$id'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/ar'
     | '/explore'
+    | '/login'
+    | '/review'
     | '/saved'
     | '/tours'
     | '/markers/$id'
     | '/tours/$id'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/'
     | '/ar'
     | '/explore'
+    | '/login'
+    | '/review'
     | '/saved'
     | '/tours'
     | '/markers/$id'
     | '/tours/$id'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ArRoute: typeof ArRoute
   ExploreRoute: typeof ExploreRoute
+  LoginRoute: typeof LoginRoute
+  ReviewRoute: typeof ReviewRoute
   SavedRoute: typeof SavedRoute
   ToursRoute: typeof ToursRouteWithChildren
   MarkersIdRoute: typeof MarkersIdRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -141,6 +180,20 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/saved': {
@@ -171,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursIdRouteImport
       parentRoute: typeof ToursRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -188,9 +248,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ArRoute: ArRoute,
   ExploreRoute: ExploreRoute,
+  LoginRoute: LoginRoute,
+  ReviewRoute: ReviewRoute,
   SavedRoute: SavedRoute,
   ToursRoute: ToursRouteWithChildren,
   MarkersIdRoute: MarkersIdRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

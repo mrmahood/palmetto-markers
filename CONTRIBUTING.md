@@ -20,4 +20,4 @@ The atlas is meant to stay readable without an account. Contributions are **sour
 
 Issues and pull requests against this repo are welcome. Keep changes small. Do not commit `.env`, API keys, or `node_modules`.
 
-Until the in-app submit queue exists, open an issue with the marker id (e.g. `35-11`), the image URL, and the credit line.
+On a lesson, sign in and use **Source a photograph**. Submissions stay pending until an editor accepts them. You can also open an issue with the marker id (e.g. `35-11`), the image URL, and the credit line.

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bookmark, ChevronRight, Search } from "lucide-react";
+import { AuthChip } from "@/components/auth-chip";
 import { BottomNav } from "@/components/bottom-nav";
 import { InstallHint } from "@/components/install-hint";
 import { ERA_LABEL, heroImage, REGION_ORDER, THEME_LABEL } from "@/lib/markers";
@@ -45,13 +46,16 @@ function ExplorePage() {
               Explore
             </h1>
           </div>
-          <Link
-            to="/saved"
-            className="mt-1 flex size-11 items-center justify-center rounded-lg border border-border bg-elevated"
-            aria-label="Saved markers"
-          >
-            <Bookmark className="size-4" />
-          </Link>
+          <div className="mt-1 flex items-center gap-2">
+            <AuthChip next="/explore" />
+            <Link
+              to="/saved"
+              className="flex size-11 items-center justify-center rounded-lg border border-border bg-elevated"
+              aria-label="Saved markers"
+            >
+              <Bookmark className="size-4" />
+            </Link>
+          </div>
         </div>
         <label className="mt-4 flex h-11 items-center gap-2 rounded-xl border border-border bg-elevated px-3">
           <Search className="size-4 text-muted" />

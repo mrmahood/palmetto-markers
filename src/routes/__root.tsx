@@ -18,7 +18,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "A field guide to every official South Carolina historical marker — map, spoken lessons, and AR.",
+          "A field guide to every official South Carolina historical marker — map, spoken lessons, and plaque scan.",
       },
       { name: "theme-color", content: "#0c110f" },
       { name: "apple-mobile-web-app-capable", content: "yes" },

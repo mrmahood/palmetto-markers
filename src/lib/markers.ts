@@ -181,14 +181,22 @@ export function spokenLesson(m: Marker): string {
 }
 
 export function heroImage(m: Marker): string {
-  return imageFor(m).src;
+  return platesFor(m)[0].src;
 }
 
 export function imageCredit(m: Marker): string {
-  return imageFor(m).credit;
+  const p = platesFor(m)[0];
+  return p.caption ? `${p.caption} ${p.credit}` : p.credit;
 }
 
-type HistImg = { src: string; credit: string };
+type HistImg = { src: string; credit: string; exact?: boolean; caption?: string };
+
+export type Plate = {
+  src: string;
+  credit: string;
+  exact: boolean;
+  caption?: string;
+};
 
 const LOC = "Library of Congress";
 const HABS = "Historic American Buildings Survey, Library of Congress";
@@ -203,10 +211,6 @@ const BY_ID: Record<string, HistImg> = {
   "10-05": {
     src: "/images/hist/fort-moultrie.jpg",
     credit: `Fort Moultrie, Charleston Harbor. ${LOC}.`,
-  },
-  "10-76": {
-    src: "/images/hist/planter.jpg",
-    credit: `Steamer Planter, Charleston. ${LOC}.`,
   },
   "07-15": {
     src: "/images/hist/penn-school.jpg",
@@ -278,11 +282,111 @@ const BY_ID: Record<string, HistImg> = {
   },
   "35-11": {
     src: "/images/hist/roper.jpg",
-    credit: `Daniel C. Roper leaving the Treasury, c. 1918–20. National Photo Company, ${LOC}.`,
+    exact: true,
+    caption: "Daniel C. Roper leaving the Treasury, c. 1918–20.",
+    credit: `National Photo Company, ${LOC}.`,
+  },
+  "07-19": {
+    src: "/images/hist/pinckney.jpg",
+    exact: true,
+    caption: "Charles Cotesworth Pinckney, 1791.",
+    credit: `John Trumbull. Yale University Art Gallery / Wikimedia Commons.`,
+  },
+  "19-11": {
+    src: "/images/hist/longstreet.jpg",
+    exact: true,
+    caption: "Lt. Gen. James Longstreet, c. 1861–65.",
+    credit: `${LOC}, Civil War Photograph Collection.`,
+  },
+  "04-17": {
+    src: "/images/hist/clemson.jpg",
+    exact: true,
+    caption: "Thomas Green Clemson.",
+    credit: `Photograph published before 1931. Wikimedia Commons.`,
+  },
+  "35-12": {
+    src: "/images/hist/mclaurin.jpg",
+    exact: true,
+    caption: "Sen. John Lowndes McLaurin, 55th Congress.",
+    credit: `U.S. Congress / public domain.`,
+  },
+  "39-06": {
+    src: "/images/hist/lever.jpg",
+    exact: true,
+    caption: "Rep. Asbury F. Lever of South Carolina, 1919.",
+    credit: `Harris & Ewing, ${LOC}.`,
+  },
+  "23-23": {
+    src: "/images/hist/few.jpg",
+    exact: true,
+    caption: "William Preston Few, before 1912.",
+    credit: `Chanticleer yearbook, Duke University. Public domain.`,
+  },
+  "20-03": {
+    src: "/images/hist/carlisle.jpg",
+    exact: true,
+    caption: "James Henry Carlisle, Wofford College.",
+    credit: `Photograph published 1900. Wikimedia Commons.`,
+  },
+  "04-12": {
+    src: "/images/hist/johnson.jpg",
+    exact: true,
+    caption: "William Bullein Johnson.",
+    credit: `Public-domain portrait via Wikimedia Commons.`,
+  },
+  "29-09": {
+    src: "/images/hist/jackson.jpg",
+    exact: true,
+    caption: "Andrew Jackson.",
+    credit: `Wikimedia Commons. Portrait in the public domain.`,
+  },
+  "10-76": {
+    src: "/images/hist/smalls.jpg",
+    exact: true,
+    caption: "Robert Smalls, S.C. Member of Congress, 1870s.",
+    credit: `Mathew Brady, ${LOC}.`,
+  },
+  "41-04": {
+    src: "/images/hist/circular-church.jpg",
+    exact: false,
+    caption: "No public-domain portrait of Luther Rice was found.",
+    credit: `Ruins of Circular Church, Charleston, 1865. ${LOC}.`,
+  },
+  "10-30": {
+    src: "/images/hist/charleston-harbor.jpg",
+    exact: false,
+    caption: "No public-domain portrait of Jacob Bond I’on was found.",
+    credit: `Charleston Harbor. Carol M. Highsmith, ${LOC}.`,
+  },
+  "45-08": {
+    src: "/images/hist/cotton-sumter.jpg",
+    exact: false,
+    caption: "No public-domain portrait of Benjamin Britton Chandler was found.",
+    credit: `Children picking cotton, Sumter County. ${FSA}.`,
+  },
+  "06-07": {
+    src: "/images/hist/camden-sketch.jpg",
+    exact: false,
+    caption: "No public-domain portrait of Tarlton Brown was found.",
+    credit: `Battle near Camden, 1780. ${LOC}.`,
+  },
+  "46-24": {
+    src: "/images/hist/georgetown-steel.jpg",
+    exact: false,
+    caption: "No public-domain portrait of William Hill was found. He ran an ironworks.",
+    credit: `Steel mill, Georgetown. Carol M. Highsmith, ${LOC}.`,
+  },
+  "38-14": {
+    src: "/images/hist/statehouse-now.jpg",
+    exact: false,
+    caption: "No public-domain portrait of Alexander S. Salley was found.",
+    credit: `South Carolina State House. Carol M. Highsmith, ${LOC}.`,
   },
   "46-62": {
     src: "/images/hist/aragon-mill.jpg",
-    credit: `Workers at Aragon Mill, Rock Hill, 1912. Lewis Hine, ${LOC}. No public-domain photograph of the later Celanese Celriver plant was found.`,
+    exact: false,
+    caption: "Workers at Aragon Mill, Rock Hill, 1912. Lewis Hine.",
+    credit: `${LOC}. No public-domain photograph of the later Celanese Celriver plant was found.`,
   },
   "46-38": {
     src: "/images/hist/aragon-mill.jpg",
@@ -479,6 +583,49 @@ function imageFor(m: Marker): HistImg {
   if (m.region === "Lowcountry")
     return hashPick(m.id, [IMG.harbor, IMG.hall, IMG.gullah]);
   return IMG.capitol;
+}
+
+function asPlate(h: HistImg): Plate {
+  return {
+    src: h.src,
+    credit: h.credit,
+    exact: h.exact ?? false,
+    caption: h.caption,
+  };
+}
+
+const EXTRAS: Record<string, HistImg[]> = {
+  "10-76": [
+    {
+      src: "/images/hist/planter.jpg",
+      exact: true,
+      caption: "Steamer Planter, Charleston.",
+      credit: `${LOC}.`,
+    },
+  ],
+  "07-19": [
+    {
+      src: "/images/hist/charleston-harbor.jpg",
+      exact: false,
+      caption: "Charleston Harbor, later.",
+      credit: `Carol M. Highsmith, ${LOC}.`,
+    },
+  ],
+  "29-09": [
+    {
+      src: "/images/hist/camden-sketch.jpg",
+      exact: false,
+      caption: "The Revolution in the Carolina backcountry.",
+      credit: `Battle near Camden, 1780. ${LOC}.`,
+    },
+  ],
+};
+
+export function platesFor(m: Marker): Plate[] {
+  const primary = asPlate(imageFor(m));
+  const more = (EXTRAS[m.id] ?? []).map(asPlate);
+  const all = [primary, ...more];
+  return all.filter((p, i) => all.findIndex((x) => x.src === p.src) === i);
 }
 
 const FORT_MILL_VIDEO: Record<string, string> = {

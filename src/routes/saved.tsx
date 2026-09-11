@@ -1,8 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
+import { AuthChip } from "@/components/auth-chip";
 import { BottomNav } from "@/components/bottom-nav";
 import { heroImage } from "@/lib/markers";
+import { canReviewQueue } from "@/lib/sources";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { useAppStore } from "@/store/app-store";
 
 export const Route = createFileRoute("/saved")({ component: SavedPage });
@@ -13,9 +16,22 @@ function SavedPage() {
   const favorites = useAppStore((s) => s.favorites);
   const visited = useAppStore((s) => s.visited);
 
+  const { user } = useCurrentUserState();
+  const [editor, setEditor] = useState(false);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!user) {
+      setEditor(false);
+      return;
+    }
+    void canReviewQueue()
+      .then(setEditor)
+      .catch(() => setEditor(false));
+  }, [user]);
 
   const saved = useMemo(
     () => favorites.map((id) => markers.find((m) => m.id === id)).filter(Boolean),
@@ -31,12 +47,22 @@ function SavedPage() {
       className="min-h-dvh bg-background pb-24"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <header className="px-4 pt-5">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-          Library
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">Saved</h1>
+      <header className="flex items-start justify-between gap-3 px-4 pt-5">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
+            Library
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">Saved</h1>
+        </div>
+        <AuthChip next="/saved" />
       </header>
+      {editor ? (
+        <p className="px-4 pt-3">
+          <Link to="/review" className="text-sm font-medium text-accent">
+            Review pending plates
+          </Link>
+        </p>
+      ) : null}
       <section className="mt-6">
         <h2 className="px-4 text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
           Bookmarks
