@@ -1,9 +1,14 @@
 /** iOS Safari only attaches a stream if the <video> already exists
- *  and getUserMedia runs from a user gesture (or a prior grant). */
+ *  and getUserMedia runs from a user gesture (or a prior grant).
+ *  Call this from a tap. The first await must be getUserMedia — a timer
+ *  or effect loses the gesture and Safari rejects the request. */
 
-export async function startRearCamera(
-  video: HTMLVideoElement,
-): Promise<MediaStream> {
+function isPermissionDenied(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : "";
+  return name === "NotAllowedError" || name === "PermissionDeniedError";
+}
+
+export async function startRearCamera(video: HTMLVideoElement): Promise<MediaStream> {
   video.setAttribute("playsinline", "true");
   video.setAttribute("webkit-playsinline", "true");
   video.playsInline = true;
@@ -11,6 +16,10 @@ export async function startRearCamera(
   video.autoplay = true;
   video.setAttribute("muted", "");
   video.setAttribute("autoplay", "");
+
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Camera unavailable");
+  }
 
   const attempts: MediaStreamConstraints[] = [
     {
@@ -27,14 +36,22 @@ export async function startRearCamera(
 
   let last: unknown;
   for (const constraints of attempts) {
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = stream;
+      // play() can reject after the gesture ends. Keep the granted stream
+      // instead of retrying getUserMedia, which Safari will block.
       const play = video.play();
-      if (play) await play;
+      if (play) void play.catch(() => {});
       return stream;
     } catch (err) {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        if (video.srcObject === stream) video.srcObject = null;
+      }
       last = err;
+      if (isPermissionDenied(err)) break;
     }
   }
   throw last instanceof Error ? last : new Error("Camera unavailable");

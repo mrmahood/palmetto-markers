@@ -4,19 +4,21 @@ import { BookOpen, Pause, ScanLine, Volume2 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { captureFrame, startRearCamera, stopStream } from "@/lib/camera";
-import { matchPlaque, normalizeId } from "@/lib/match-plaque";
+import { isCompleteMarkerId, matchPlaque, normalizeId } from "@/lib/match-plaque";
 import { readPlaque } from "@/lib/read-plaque";
-import {
-  ERA_LABEL,
-  getMarker,
-  lessonVideo,
-  spokenLesson,
-  type Marker,
-} from "@/lib/markers";
+import { ERA_LABEL, getMarker, lessonVideo, spokenLesson, type Marker } from "@/lib/markers";
 import { playLesson, stopSpeaking, unlockSpeech } from "@/lib/speech";
 import { useAppStore } from "@/store/app-store";
 
 type ArSearch = { id?: string };
+
+function cameraFailureCopy(err: unknown): string {
+  const name = err instanceof Error ? err.name : "";
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return "Camera access was denied. Allow camera permission in your browser settings, then tap Open camera.";
+  }
+  return "The camera is unavailable. Check that this device has a camera and that nothing else is using it, then tap Open camera.";
+}
 
 export const Route = createFileRoute("/ar")({
   validateSearch: (raw: Record<string, unknown>): ArSearch => ({
@@ -33,6 +35,7 @@ function ScanPage() {
 
   const liveRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const openingRef = useRef(false);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
@@ -47,17 +50,13 @@ function ScanPage() {
 
   useEffect(() => {
     void load();
-    const t = window.setTimeout(() => {
-      void openCamera();
-    }, 250);
     return () => {
-      window.clearTimeout(t);
       stopSpeaking();
       stopStream(streamRef.current);
       streamRef.current = null;
     };
-    // openCamera uses refs; run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Camera stays closed until Open camera or the scan control. A timer
+    // is not a user gesture, so iOS Safari would reject getUserMedia.
   }, [load]);
 
   useEffect(() => {
@@ -119,25 +118,32 @@ function ScanPage() {
   const marker = full ?? markers.find((m) => m.id === picked);
 
   const hits = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (q.length < 2) return [];
+    if (isCompleteMarkerId(q)) {
+      const hit = matchPlaque(markers, { id: q, title: null, raw: q });
+      return hit ? [hit] : [];
+    }
+    const needle = q.toLowerCase();
     return markers
-      .filter((m) => `${m.id} ${m.name} ${m.city}`.toLowerCase().includes(q))
+      .filter((m) => `${m.id} ${m.name} ${m.city}`.toLowerCase().includes(needle))
       .slice(0, 5);
   }, [query, markers]);
 
   async function openCamera() {
     const video = liveRef.current;
-    if (!video || opening) return;
+    if (!video || openingRef.current) return;
+    openingRef.current = true;
     setOpening(true);
     setCameraError(null);
     try {
       const stream = await startRearCamera(video);
       streamRef.current = stream;
       setCameraOn(true);
-    } catch {
-      setCameraError("Allow Camera in Settings → Safari, then tap Open camera.");
+    } catch (err) {
+      setCameraError(cameraFailureCopy(err));
     } finally {
+      openingRef.current = false;
       setOpening(false);
     }
   }
@@ -255,13 +261,10 @@ function ScanPage() {
           className="absolute inset-x-0 z-20 px-5"
           style={{ top: "max(5rem, calc(env(safe-area-inset-top) + 3.5rem))" }}
         >
-          <h1 className="font-display text-3xl font-medium tracking-tight">
-            Scan the plaque
-          </h1>
+          <h1 className="font-display text-3xl font-medium tracking-tight">Scan the plaque</h1>
           <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
-            Point at a South Carolina historical marker. We read the number on
-            the sign and open that lesson — like a QR code, using the plaque
-            itself.
+            Point at a South Carolina historical marker. We read the number on the sign and open
+            that lesson — like a QR code, using the plaque itself.
           </p>
           <Button
             size="lg"
@@ -273,10 +276,12 @@ function ScanPage() {
             {opening ? "Opening camera…" : "Open camera"}
           </Button>
           {cameraError ? (
-            <p className="mt-3 text-sm leading-relaxed text-destructive">{cameraError}</p>
+            <p className="mt-3 text-sm leading-relaxed text-destructive" role="alert">
+              {cameraError}
+            </p>
           ) : (
             <p className="mt-3 text-xs leading-relaxed text-muted">
-              iPhone: tap Open camera, then allow access.
+              Tap Open camera, then allow access when your browser asks.
             </p>
           )}
         </div>
@@ -285,8 +290,7 @@ function ScanPage() {
       <div
         className="absolute inset-x-0 bottom-0 z-20 px-4 pt-10"
         style={{
-          background:
-            "linear-gradient(to top, var(--color-background) 22%, transparent)",
+          background: "linear-gradient(to top, var(--color-background) 22%, transparent)",
           paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom))",
         }}
       >
@@ -295,9 +299,7 @@ function ScanPage() {
             <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-accent">
               {marker.id} · {ERA_LABEL[marker.era] ?? marker.era}
             </p>
-            <h2 className="mt-1 font-display text-2xl font-medium leading-tight">
-              {marker.name}
-            </h2>
+            <h2 className="mt-1 font-display text-2xl font-medium leading-tight">{marker.name}</h2>
             <p className="mt-1 line-clamp-2 text-sm text-muted">
               {marker.front || "A South Carolina Historical Marker."}
             </p>
