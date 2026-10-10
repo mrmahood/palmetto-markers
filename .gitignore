@@ -22,3 +22,4 @@ startup.sh
 .idea
 *.log
 .cache
+verify-output/
