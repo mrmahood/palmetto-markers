@@ -1,0 +1,968 @@
+import type {
+  LessonArt,
+  LessonEvent,
+  LessonPanel,
+  LessonSource,
+  MarkerLesson,
+} from "./types";
+
+/** Hickory Grove, McConnells, Sharon, and Bullock Creek.
+ * Facts are from that marker only. A year-span is only the difference
+ * of two years the marker prints. */
+
+const INTRO =
+  "Move through the years on this marker. Tap the picture. Every fact is from the inscription.";
+
+function art(file: string, label: string): LessonArt {
+  return { src: `/images/lessons/${file}`, label };
+}
+
+function cited(id: string, name: string, sides: "front" | "front and back"): LessonSource {
+  return {
+    id: "inscription",
+    label: `South Carolina Historical Marker ${id}, "${name}," ${sides} inscription. South Carolina Department of Archives and History, Historical Marker Program.`,
+  };
+}
+
+function span(note: string): LessonSource {
+  return { id: "span", label: note };
+}
+
+function lesson(
+  markerId: string,
+  title: string,
+  timelineLabel: string,
+  sources: LessonSource[],
+  panels: LessonPanel[],
+): MarkerLesson {
+  return { markerId, title, intro: INTRO, timelineLabel, sources, panels };
+}
+
+function order(events: LessonEvent[], offer: string[]): LessonPanel {
+  return {
+    kind: "order",
+    id: "task",
+    kicker: "Try it",
+    title: "Put the events in order",
+    partLabel: "put events in order",
+    prompt: "Tap the earliest event first. The marker is the answer key.",
+    doneLine: "That's the order on the marker.",
+    events,
+    offer,
+  };
+}
+
+function takeaway(lines: string[]): LessonPanel {
+  return {
+    kind: "takeaway",
+    id: "takeaway",
+    kicker: "Takeaway",
+    title: "3 things to remember",
+    partLabel: "three things to remember",
+    lines,
+  };
+}
+
+export const yorkLessonsG: MarkerLesson[] = [
+  lesson(
+    "46-44",
+    "Three generations of Hickory Grove schools",
+    "Hickory Grove schools timeline",
+    [cited("46-44", "Hickory Grove Schools", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "school",
+        kicker: "1916",
+        title: "A school for grades 1 through 11",
+        partLabel: "the 1916 school",
+        art: art("hickory-school.jpg", "Illustration of a two-story brick school. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "elem",
+            label: "1916",
+            x: 32,
+            y: 46,
+            fact: "Hickory Grove School, a two-story brick building, was built in 1916 on Peachtree Street for grades 1 through 11.",
+          },
+          {
+            id: "high",
+            label: "1928",
+            x: 74,
+            y: 52,
+            fact: "In 1928 Hickory Grove High School, a one-story brick building, was built at the corner of Wylie Avenue and Wilkerson Street as a separate high school.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "wpa",
+        kicker: "1939",
+        title: "What the WPA added",
+        partLabel: "the 1939 buildings",
+        art: art("hickory-wpa.jpg", "Illustration of a small vocational building, a lunchroom, and a bus shed. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "wpa",
+            label: "1939",
+            x: 34,
+            y: 50,
+            fact: "In 1939 the Works Progress Administration built a teacherage, a bus shed, a vocational building, and a lunchroom.",
+          },
+          {
+            id: "later",
+            label: "What remains",
+            x: 74,
+            y: 48,
+            fact: "The high school closed in 1975 and was demolished in 1990. The elementary school closed in 1988 and was demolished in 1998. The 1939 vocational building, lunchroom, and bus shed still stand. In 2010 the vocational building housed a magistrate's office, and the lunchroom housed a senior citizens' and community center.",
+          },
+        ],
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("hickory-school.jpg", "Illustration of the 1916 school. Not a historical photograph."),
+        nowArt: art("hickory-today.jpg", "Illustration of a small civic building and a marker, the old school gone. Not a photograph of the site today."),
+        thenCaption: "Illustration of the brick school the marker says was built in 1916. Not a historical photograph.",
+        nowCaption: "Illustration of a marker. The marker says the 1916 and 1928 schools were demolished, and that the 1939 vocational building and lunchroom were still in use in 2010. Not a photograph.",
+      },
+      order(
+        [
+          { id: "elem", year: "1916", label: "The two-story school is built on Peachtree Street.", why: "The marker dates that school to 1916." },
+          { id: "high", year: "1928", label: "A separate high school is built.", why: "The marker dates the high school to 1928." },
+          { id: "wpa", year: "1939", label: "The WPA adds a teacherage, bus shed, shop, and lunchroom.", why: "The marker dates those buildings to 1939." },
+          { id: "close", year: "1975", label: "The high school closes.", why: "The marker dates the high-school closing to 1975. The elementary school closed in 1988." },
+        ],
+        ["close", "elem", "wpa", "high"],
+      ),
+      takeaway([
+        "Hickory Grove School opened in 1916 for grades 1 through 11. A separate high school was built in 1928.",
+        "In 1939 the Works Progress Administration added a teacherage, a bus shed, a vocational building, and a lunchroom.",
+        "The high school closed in 1975 and the elementary school in 1988. Both were later demolished. The 1939 shop, lunchroom, and bus shed were still standing in 2010.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-16",
+    "A town of one square mile",
+    "Hickory Grove timeline",
+    [cited("46-16", "Hickory Grove", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "early",
+        kicker: "1771",
+        title: "A grant from George III",
+        partLabel: "the early settlement",
+        art: art("hickorytown-land.jpg", "Illustration of open piedmont land and a few trees. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "grant",
+            label: "1771",
+            x: 32,
+            y: 52,
+            fact: "The land where Hickory Grove grew was granted to John McKenney in 1771 by George III of England.",
+          },
+          {
+            id: "school",
+            label: "A school by 1851",
+            x: 74,
+            y: 48,
+            fact: "The Hickory Grove post office was operating as early as 1831. A free public school was here by 1851.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "rail",
+        kicker: "1888",
+        title: "A railroad and a charter",
+        partLabel: "the town",
+        art: art("hickorytown-rail.jpg", "Illustration of a small town and a railroad crossing. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "town",
+            label: "1888",
+            x: 30,
+            y: 50,
+            fact: "In 1888 the Charleston, Cincinnati, and Chicago Railroad finished its line through Hickory Grove, linking this area to the South Carolina coast. The town was incorporated that same year. It was one square mile, centered on the crossing of York Street and Wylie Avenue.",
+          },
+          {
+            id: "people",
+            label: "The first officers",
+            x: 74,
+            y: 46,
+            fact: "J. N. McDill was the first intendant. The wardens were Dr. J. W. Allison, J. W. Castles, T. M. Whisonant, and J. H. Wylie. The Associate Reformed Presbyterian Church kept its orphanage here from 1897 until 1905.",
+          },
+        ],
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("hickorytown-rail.jpg", "Illustration of the town of 1888. Not a historical photograph."),
+        nowArt: art("hickorytown-today.jpg", "Illustration of a marker at a town crossing. Not a photograph of the site today."),
+        thenCaption: "Illustration of the railroad town the marker says was incorporated in 1888. Not a historical photograph.",
+        nowCaption: "Illustration of a marker at a street crossing. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "grant", year: "1771", label: "John McKenney receives the land grant.", why: "The marker dates that grant to 1771." },
+          { id: "po", year: "1831", label: "The post office is already operating.", why: "The marker says the post office was in operation as early as 1831." },
+          { id: "school", year: "1851", label: "A free public school is here.", why: "The marker says a free public school was located here by 1851." },
+          { id: "town", year: "1888", label: "The railroad arrives and the town is incorporated.", why: "The marker dates both the railroad and the incorporation to 1888." },
+        ],
+        ["town", "grant", "school", "po"],
+      ),
+      takeaway([
+        "George III granted this land to John McKenney in 1771. A post office was here by 1831, and a free public school by 1851.",
+        "The railroad and the town charter both came in 1888. The town was one square mile, centered on York Street and Wylie Avenue.",
+        "J. N. McDill was the first intendant. An A.R.P. orphanage operated here from 1897 until 1905.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-74",
+    "St. James School",
+    "St. James School timeline",
+    [cited("46-74", "St. James Rosenwald School", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "school",
+        kicker: "1929",
+        title: "A two-teacher school on four acres",
+        partLabel: "the school",
+        art: art("stjames-school.jpg", "Illustration of a small wooden school on a rural lot. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "built",
+            label: "1929-30",
+            x: 32,
+            y: 50,
+            fact: "This was one of twenty schools for African American children built in York County in the early twentieth century with help from the Julius Rosenwald Foundation. The foundation helped fund nearly 5,000 new schools for Black pupils across the South, including about 500 in South Carolina. This school was built in 1929-30 for $3,000, on 4 acres, on a two-teacher plan used for smaller Rosenwald schools.",
+          },
+          {
+            id: "principal",
+            label: "The first principal",
+            x: 74,
+            y: 48,
+            fact: "James W. Goudlock was the first principal at this location.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "later",
+        kicker: "1957",
+        title: "Seventy pupils, then a church",
+        partLabel: "the last year",
+        art: art("stjames-church.jpg", "Illustration of the same small school used later as a church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "close",
+            label: "1957",
+            x: 36,
+            y: 52,
+            fact: "It served local families until 1957 and was one of many local schools that closed in the 1950s as York County consolidated its schools. In the last year, three teachers taught seventy pupils. The building later housed St. Paul's Baptist Church. It is one of the only Rosenwald schools still standing in the county.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "The last year",
+        title: "Pupils in the final year",
+        partLabel: "70 pupils",
+        value: 70,
+        unit: "pupils",
+        meant: "What this meant: the marker says three teachers taught seventy pupils in the school's last year. The building had cost $3,000. The \"nearly 5,000\" schools across the South and the \"approx. 500\" in South Carolina stay approximate.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("stjames-school.jpg", "Illustration of the 1929 school. Not a historical photograph."),
+        nowArt: art("stjames-today.jpg", "Illustration of a small school building and a marker. Not a photograph of the site today."),
+        thenCaption: "Illustration of the school the marker says was built in 1929-30. Not a historical photograph.",
+        nowCaption: "Illustration of a building and a marker. The marker says this is one of the only Rosenwald schools still standing in York County. Not a photograph.",
+      },
+      order(
+        [
+          { id: "built", year: "1929", label: "St. James School is built.", why: "The marker dates the building to 1929-30." },
+          { id: "close", year: "1957", label: "The school closes, with seventy pupils.", why: "The marker says it served families until 1957." },
+          { id: "church", year: "Later", label: "The building houses St. Paul's Baptist Church.", why: "The marker says that use came later, and that the building still stands." },
+        ],
+        ["church", "built", "close"],
+      ),
+      takeaway([
+        "St. James was one of twenty Rosenwald schools in York County, built in 1929-30 for $3,000 on a two-teacher plan.",
+        "James W. Goudlock was the first principal here. In the last year, three teachers taught seventy pupils.",
+        "It closed in 1957 during school consolidation. The building later housed St. Paul's Baptist Church and is one of the few Rosenwald schools still standing in the county.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-67",
+    "The Brick House",
+    "Brick House timeline",
+    [cited("46-67", "Brick House", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "house",
+        kicker: "1841",
+        title: "A store, a post office, and a school",
+        partLabel: "the house",
+        art: art("brickhouse-house.jpg", "Illustration of a two-story brick Greek Revival house. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "built",
+            label: "About 1843",
+            x: 32,
+            y: 46,
+            fact: "In 1841 Dr. John S. Bratton began a new all-brick two-story house at Brattonsville. It was finished about 1843. The Greek Revival building held the Brattonsville store and post office. About 1855 a two-story frame section was added at the rear for the Brattonsville School.",
+          },
+          {
+            id: "store",
+            label: "The later store",
+            x: 74,
+            y: 55,
+            fact: "Napoleon Bratton had taken over the store by 1870 and built a new store about 1885. It closed in 1915.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "yard",
+        kicker: "1871",
+        title: "The murder of James Williams",
+        partLabel: "March 1871",
+        art: art("brickhouse-yard.jpg", "Illustration of the brick house and an empty yard. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "murder",
+            label: "March 1871",
+            x: 36,
+            y: 52,
+            fact: "In March 1871, members of the York County Ku Klux Klan, led by Dr. J. Rufus Bratton, lynched Capt. James Williams, a Black militia captain. They hanged him from a tree near his home, a mile and a half away. His body was brought to the Brick House the next day, and a coroner's inquest was held there. The marker says the murder was part of a wave of Reconstruction-era Klan violence that led to martial law in nine South Carolina counties.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1871",
+        title: "Counties placed under martial law",
+        partLabel: "9 counties",
+        value: 9,
+        unit: "counties",
+        meant: "What this meant: the marker says the murder of James Williams was part of a wave of Klan violence that led to martial law in nine South Carolina counties.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("brickhouse-house.jpg", "Illustration of the Brick House. Not a historical photograph."),
+        nowArt: art("brickhouse-today.jpg", "Illustration of a brick house and a marker. Not a photograph of the site today."),
+        thenCaption: "Illustration of the house the marker says was finished about 1843. Not a historical photograph.",
+        nowCaption: "Illustration of a brick house and a marker. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "start", year: "1841", label: "Dr. John S. Bratton begins the brick house.", why: "The marker dates the start of construction to 1841." },
+          { id: "done", year: "About 1843", label: "The house is finished and holds the store and post office.", why: "The marker says it was completed about 1843." },
+          { id: "murder", year: "1871", label: "James Williams is murdered, and the inquest is held here.", why: "The marker dates the lynching to March 1871 and the inquest to the next day." },
+          { id: "close", year: "1915", label: "The store Napoleon Bratton built closes.", why: "The marker dates that closing to 1915." },
+        ],
+        ["close", "start", "murder", "done"],
+      ),
+      takeaway([
+        "Dr. John S. Bratton's brick house, begun in 1841 and finished about 1843, held the Brattonsville store and post office. A school wing was added about 1855.",
+        "In March 1871 the York County Ku Klux Klan, led by Dr. J. Rufus Bratton, lynched militia captain James Williams. The inquest was held at this house the next day.",
+        "The marker says that murder was part of a wave of Klan violence that brought martial law to nine South Carolina counties. The later store closed in 1915.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-81",
+    "Mt. Zion School",
+    "Mt. Zion School timeline",
+    [cited("46-81", "Mt. Zion School", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "wood",
+        kicker: "1876",
+        title: "A two-room school beside the church",
+        partLabel: "the first school",
+        art: art("mtzion-wood.jpg", "Illustration of a small two-room wooden school beside a church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "open",
+            label: "By 1876",
+            x: 32,
+            y: 50,
+            fact: "This was the first site of Mt. Zion School, a public school for African Americans started by Mt. Zion Baptist Church. Members acquired this land in 1873 and opened the school by 1876. J. C. Noisette was the teacher then. The school was a wooden two-room building on a quarter-acre lot, on the northwest side of the church property, and the church members were its main support.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "new",
+        kicker: "1924",
+        title: "A new school on three acres",
+        partLabel: "the 1924 school",
+        art: art("mtzion-new.jpg", "Illustration of a three-teacher wooden school on a larger lot. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "rosenwald",
+            label: "1924",
+            x: 36,
+            y: 48,
+            fact: "In 1924 the trustees gave a 3-acre lot on Brattonsville Road to McConnellsville School District No. 13. A new three-teacher school was built there, paid for by the Julius Rosenwald Fund, local Black residents, and the school district. The old school on this site was later removed.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1924",
+        title: "Acres given for the new school",
+        partLabel: "3 acres",
+        value: 3,
+        unit: "acres",
+        meant: "What this meant: the marker says the trustees gave 3 acres on Brattonsville Road for a new three-teacher school. The first school here sat on a quarter of an acre.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("mtzion-wood.jpg", "Illustration of the first school. Not a historical photograph."),
+        nowArt: art("mtzion-today.jpg", "Illustration of a marker, the old school gone. Not a photograph of the site today."),
+        thenCaption: "Illustration of the wooden school the marker says was open by 1876. Not a historical photograph.",
+        nowCaption: "Illustration of a marker. The marker says the old school on this site was later removed. Not a photograph.",
+      },
+      order(
+        [
+          { id: "land", year: "1873", label: "Church members acquire this site.", why: "The marker dates that purchase to 1873." },
+          { id: "open", year: "1876", label: "Mt. Zion School is open, with J. C. Noisette teaching.", why: "The marker says the school had opened by 1876." },
+          { id: "new", year: "1924", label: "A new three-teacher school is built on Brattonsville Road.", why: "The marker dates that gift of land and the new school to 1924." },
+          { id: "gone", year: "Later", label: "The old school on this site is removed.", why: "The marker says the removal came later." },
+        ],
+        ["gone", "land", "new", "open"],
+      ),
+      takeaway([
+        "Mt. Zion Baptist Church opened a public school for African American children here by 1876, on land it acquired in 1873.",
+        "J. C. Noisette taught in a two-room wooden building on a quarter-acre lot. Church members were the school's main support.",
+        "In 1924 a new three-teacher Rosenwald school was built on 3 acres on Brattonsville Road. The school on this site was later removed.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-13",
+    "From McConnellsville to McConnells",
+    "McConnells timeline",
+    [cited("46-13", "McConnells", "front")],
+    [
+      {
+        kind: "scene",
+        id: "rail",
+        kicker: "1852",
+        title: "A railroad, then a post office",
+        partLabel: "the railroad town",
+        art: art("mcconnells-rail.jpg", "Illustration of a small depot and a few buildings. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "rail",
+            label: "1852",
+            x: 32,
+            y: 52,
+            fact: "After the Kings Mountain Railroad was finished in 1852, the McConnellsville post office opened here in 1854. The town was named for the McConnell family.",
+          },
+          {
+            id: "town",
+            label: "1906",
+            x: 74,
+            y: 48,
+            fact: "The town was incorporated in 1906. J. T. Crawford was the first intendant. The wardens were J. F. Ashe, S. H. Love, J. O. Moore, and J. M. Williams. The post office was renamed McConnells in 1951.",
+          },
+        ],
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("mcconnells-rail.jpg", "Illustration of the railroad settlement. Not a historical photograph."),
+        nowArt: art("mcconnells-today.jpg", "Illustration of a marker in a small town. Not a photograph of the site today."),
+        thenCaption: "Illustration of a depot, for the town that grew after the railroad of 1852. Not a historical photograph.",
+        nowCaption: "Illustration of a marker. The marker says the post office was renamed McConnells in 1951. Not a photograph.",
+      },
+      order(
+        [
+          { id: "rail", year: "1852", label: "The Kings Mountain Railroad is finished.", why: "The marker dates the railroad to 1852." },
+          { id: "po", year: "1854", label: "The McConnellsville post office opens.", why: "The marker dates that post office to 1854." },
+          { id: "town", year: "1906", label: "The town is incorporated.", why: "The marker dates the incorporation to 1906." },
+          { id: "name", year: "1951", label: "The post office is renamed McConnells.", why: "The marker dates that renaming to 1951." },
+        ],
+        ["name", "rail", "town", "po"],
+      ),
+      takeaway([
+        "The Kings Mountain Railroad reached here in 1852. The McConnellsville post office opened in 1854.",
+        "The town, named for the McConnell family, was incorporated in 1906. J. T. Crawford was the first intendant.",
+        "The post office was renamed McConnells in 1951.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-12",
+    "A town named for its church",
+    "Town of Sharon timeline",
+    [cited("46-12", "Town of Sharon", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "church",
+        kicker: "1800",
+        title: "Sharon church, then a town",
+        partLabel: "the church",
+        art: art("sharon-church.jpg", "Illustration of a country church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "church",
+            label: "1800",
+            x: 34,
+            y: 48,
+            fact: "The town grew up around Sharon Associate Reformed Presbyterian Church, which was here in 1800, and took its name from the church.",
+          },
+          {
+            id: "rail",
+            label: "The 1880s",
+            x: 74,
+            y: 55,
+            fact: "When the Charleston, Cincinnati, and Chicago Railroad came through in the 1880s, John L. Rainey, who owned large tracts here, gave land for the station. The General Assembly incorporated the town in 1889.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "lots",
+        kicker: "1889",
+        title: "Land for the churches, then a bank",
+        partLabel: "the gifts of land",
+        art: art("sharon-street.jpg", "Illustration of a small downtown street. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "gifts",
+            label: "The churches",
+            x: 30,
+            y: 52,
+            fact: "Rainey conveyed land to the Presbyterian church in 1889 and 1898, to the Methodists in 1897, and to the Methodist Episcopal Zion church in 1904.",
+          },
+          {
+            id: "bank",
+            label: "The bank",
+            x: 74,
+            y: 46,
+            fact: "The First National Bank, established here in 1909, was the only bank in western York County to survive the Depression. The Hill Banking and Mercantile Company was founded before 1915.",
+          },
+        ],
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("sharon-church.jpg", "Illustration of the church the town was named for. Not a historical photograph."),
+        nowArt: art("sharon-today.jpg", "Illustration of a marker on a small-town street. Not a photograph of the site today."),
+        thenCaption: "Illustration of a church, for the congregation the marker says was here in 1800. Not a historical photograph.",
+        nowCaption: "Illustration of a marker in Sharon. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "church", year: "1800", label: "Sharon Associate Reformed Presbyterian Church is here.", why: "The marker says the church existed here in 1800." },
+          { id: "rail", year: "1880s", label: "The railroad comes through, and Rainey gives land for the station.", why: "The marker places the railroad in the 1880s." },
+          { id: "town", year: "1889", label: "The town is incorporated.", why: "The marker dates the incorporation to 1889." },
+          { id: "bank", year: "1909", label: "First National Bank is established.", why: "The marker dates the bank to 1909." },
+        ],
+        ["bank", "church", "town", "rail"],
+      ),
+      takeaway([
+        "Sharon took its name from Sharon Associate Reformed Presbyterian Church, which was here in 1800.",
+        "John L. Rainey gave land for the railroad station in the 1880s, and later for Presbyterian, Methodist, and Methodist Episcopal Zion churches. The town was incorporated in 1889.",
+        "First National Bank, established in 1909, was the only bank in western York County to survive the Depression.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-72",
+    "Blue Branch Church",
+    "Blue Branch Church timeline",
+    [cited("46-72", "Blue Branch Church", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "church",
+        kicker: "1871",
+        title: "One hundred twenty members",
+        partLabel: "the first church",
+        art: art("bluebranch-church.jpg", "Illustration of a small wooden church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "org",
+            label: "1870-71",
+            x: 32,
+            y: 50,
+            fact: "Blue Branch Church was formally organized in 1870-71, part of northern Presbyterians' missions to freedpeople in the South. Tradition holds that this site had been a burial ground for enslaved people. The first minister was the Rev. Baker Russel (1819-1902).",
+          },
+          {
+            id: "members",
+            label: "The first building",
+            x: 74,
+            y: 48,
+            fact: "The first church was built here in 1871-72. Blue Branch then had 120 members and a Sunday school. It was founded as part of the Atlantic Synod, the first of four African American synods in the Presbyterian Church, U.S.A.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "later",
+        kicker: "1946",
+        title: "A new church, then a closing",
+        partLabel: "the later church",
+        art: art("bluebranch-new.jpg", "Illustration of a later country church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "new",
+            label: "1946",
+            x: 34,
+            y: 48,
+            fact: "For at least a century, Blue Branch was a spiritual home for Black residents of the Bullock Creek area. A new church was built in 1946. A cornerstone marked 1845 was added then, for reasons the marker says are unknown.",
+          },
+          {
+            id: "end",
+            label: "1972",
+            x: 74,
+            y: 55,
+            fact: "The congregation disbanded in 1972.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1871",
+        title: "Members when the first church was built",
+        partLabel: "120 members",
+        value: 120,
+        unit: "members",
+        meant: "What this meant: the marker says Blue Branch had 120 members and a Sunday school when the first church was built in 1871-72.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("bluebranch-church.jpg", "Illustration of the first church. Not a historical photograph."),
+        nowArt: art("bluebranch-today.jpg", "Illustration of a church and a marker. Not a photograph of the site today."),
+        thenCaption: "Illustration of the church the marker says was built in 1871-72. Not a historical photograph.",
+        nowCaption: "Illustration of a church and a marker. The marker says the congregation disbanded in 1972. Not a photograph.",
+      },
+      order(
+        [
+          { id: "org", year: "1870", label: "The church is organized.", why: "The marker dates the organization to 1870-71." },
+          { id: "built", year: "1871", label: "The first church is built, with 120 members.", why: "The marker dates that building to 1871-72." },
+          { id: "new", year: "1946", label: "A new church is built.", why: "The marker dates the new church to 1946." },
+          { id: "end", year: "1972", label: "The congregation disbands.", why: "The marker dates the disbanding to 1972." },
+        ],
+        ["end", "org", "new", "built"],
+      ),
+      takeaway([
+        "Blue Branch was organized in 1870-71 as part of northern Presbyterian missions to freedpeople. Tradition says the site had been a burial ground for enslaved people.",
+        "The first church, built in 1871-72, had 120 members. The Rev. Baker Russel was the first minister. The church belonged to the Atlantic Synod.",
+        "A new church was built in 1946, with a cornerstone marked 1845 for reasons the marker says are unknown. The congregation disbanded in 1972.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-32",
+    "The bank that outlasted the Depression",
+    "First National Bank of Sharon timeline",
+    [
+      cited("46-32", "First National Bank of Sharon", "front and back"),
+      span("\"19 years\" is 1929 minus 1910, the last and first years the marker gives for the bank's national bank notes."),
+    ],
+    [
+      {
+        kind: "scene",
+        id: "bank",
+        kicker: "1909",
+        title: "Sharon's first bank",
+        partLabel: "the bank",
+        art: art("sharonbank-arch.jpg", "Illustration of a small bank with an arched corner entrance. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "built",
+            label: "1909-10",
+            x: 34,
+            y: 46,
+            fact: "W. W. Blair built this bank in 1909-10. It was the first bank in Sharon, a town incorporated in 1889. The first officers were J. H. Saye, president; J. L. Rainey, vice president; and A. M. Haddon, cashier.",
+          },
+          {
+            id: "notes",
+            label: "The notes",
+            x: 74,
+            y: 55,
+            fact: "From 1910 to 1929 the U.S. Bureau of Engraving and Printing made national bank notes for this bank. It was the only bank in western York County to survive the Depression.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "later",
+        kicker: "1986",
+        title: "A merger, and a historic district",
+        partLabel: "the later years",
+        art: art("sharonbank-street.jpg", "Illustration of the bank on a small downtown street. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "merge",
+            label: "1986",
+            x: 36,
+            y: 50,
+            fact: "When it merged with First Citizens Bank in 1986, First National Bank of Sharon was the oldest continuously operating national bank in York County. The building, with its arched corner entrance, is part of the Sharon Downtown Historic District, listed in the National Register in 2001.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1910-1929",
+        title: "Years the bureau printed this bank's notes",
+        partLabel: "19 years",
+        value: 19,
+        unit: "years",
+        meant: "What this meant: 1929 comes 19 years after 1910. That is the stretch the marker gives for national bank notes printed for this bank.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("sharonbank-arch.jpg", "Illustration of the 1909 bank. Not a historical photograph."),
+        nowArt: art("sharonbank-today.jpg", "Illustration of a bank building and a marker. Not a photograph of the site today."),
+        thenCaption: "Illustration of the bank the marker says was built in 1909-10. Not a historical photograph.",
+        nowCaption: "Illustration of a bank and a marker. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "town", year: "1889", label: "Sharon is incorporated.", why: "The marker dates the town's incorporation to 1889." },
+          { id: "built", year: "1909", label: "W. W. Blair builds the bank.", why: "The marker dates the building to 1909-10." },
+          { id: "notes", year: "1910", label: "National bank notes begin to be printed for it.", why: "The marker dates those notes to 1910-1929." },
+          { id: "merge", year: "1986", label: "The bank merges with First Citizens.", why: "The marker dates the merger to 1986." },
+        ],
+        ["merge", "town", "notes", "built"],
+      ),
+      takeaway([
+        "W. W. Blair built Sharon's first bank in 1909-10. J. H. Saye was president, J. L. Rainey vice president, and A. M. Haddon cashier.",
+        "The Bureau of Engraving and Printing made its national bank notes from 1910 to 1929. It was the only bank in western York County to survive the Depression.",
+        "At its 1986 merger with First Citizens, it was the oldest continuously operating national bank in the county.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-31",
+    "A fifteen-foot stockade",
+    "Lacey's Fort timeline",
+    [cited("46-31", "Lacey's Fort", "front and back")],
+    [
+      {
+        kind: "scene",
+        id: "fort",
+        kicker: "1780",
+        title: "Liberty Hill, or Patriot's Folly",
+        partLabel: "the stockade",
+        art: art("lacey-stockade.jpg", "Illustration of a low log stockade on a hill. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "lacey",
+            label: "Edward Lacey",
+            x: 32,
+            y: 48,
+            fact: "Col. Edward Lacey (1742-1813), a leading officer in the Revolution in the South Carolina backcountry, occupied this hill west of Turkey Creek in the late summer of 1780. That July and August he commanded South Carolina militia at Rocky Mount, Cary's Fort, Hanging Rock, and Fishing Creek. He built a 15-foot log stockade near this site.",
+          },
+          {
+            id: "names",
+            label: "Two names",
+            x: 74,
+            y: 55,
+            fact: "Patriots sometimes called the fort Liberty Hill. Loyalists called it Patriot's Folly.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "camp",
+        kicker: "1781",
+        title: "After Kings Mountain",
+        partLabel: "the later camps",
+        art: art("lacey-camp.jpg", "Illustration of a hilltop camp, figures seen only from behind. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "after",
+            label: "October 1780",
+            x: 32,
+            y: 50,
+            fact: "After the American victory at Kings Mountain on October 7, 1780, South Carolina militia under Cols. Edward Lacey and William Hill occupied the fort.",
+          },
+          {
+            id: "cornwallis",
+            label: "January 1781",
+            x: 74,
+            y: 48,
+            fact: "Gen. Charles Cornwallis, commanding British forces in the South, later camped here briefly in January 1781.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1780",
+        title: "Height of the stockade",
+        partLabel: "15 feet",
+        value: 15,
+        unit: "feet",
+        meant: "What this meant: the marker says Lacey built a 15-foot log stockade near this site in the late summer of 1780.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("lacey-stockade.jpg", "Illustration of the stockade. Not a historical photograph."),
+        nowArt: art("lacey-today.jpg", "Illustration of a marker on a wooded hill, the stockade gone. Not a photograph of the site today."),
+        thenCaption: "Illustration of a log stockade, for the fort the marker places here in 1780. Not a historical photograph.",
+        nowCaption: "Illustration of a marker on a hill west of a creek. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "fights", year: "July 1780", label: "Lacey commands militia at Rocky Mount, Cary's Fort, Hanging Rock, and Fishing Creek.", why: "The marker dates those fights to July and August 1780." },
+          { id: "fort", year: "Late summer 1780", label: "He builds the stockade on this hill.", why: "The marker places the fort in the late summer of 1780." },
+          { id: "km", year: "Oct 7", label: "After Kings Mountain, Lacey and Hill occupy the fort.", why: "The marker dates Kings Mountain to October 7, 1780, and says they occupied the fort afterward." },
+          { id: "british", year: "Jan 1781", label: "Cornwallis camps here briefly.", why: "The marker dates that camp to January 1781." },
+        ],
+        ["british", "fights", "km", "fort"],
+      ),
+      takeaway([
+        "Col. Edward Lacey occupied this hill west of Turkey Creek in the late summer of 1780 and built a 15-foot log stockade.",
+        "Patriots called it Liberty Hill. Loyalists called it Patriot's Folly. After Kings Mountain, Lacey and William Hill occupied it.",
+        "Gen. Charles Cornwallis camped here briefly in January 1781.",
+      ]),
+    ],
+  ),
+  lesson(
+    "46-02",
+    "A Whig church and an early academy",
+    "Bullock Creek Presbyterian timeline",
+    [
+      cited("46-02", "Bullock Creek Presbyterian Church", "front"),
+      span("\"27 years\" is 1801 minus 1774, the year Dr. Alexander's pastorate ended and the year it began."),
+    ],
+    [
+      {
+        kind: "scene",
+        id: "church",
+        kicker: "1769",
+        title: "A stronghold during the Revolution",
+        partLabel: "the church",
+        art: art("bullock-church.jpg", "Illustration of an early wooden church. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "org",
+            label: "1769",
+            x: 32,
+            y: 50,
+            fact: "This church was organized in 1769. Under Dr. Joseph Alexander, pastor from 1774 to 1801, it was a Whig stronghold during the Revolution.",
+          },
+        ],
+      },
+      {
+        kind: "scene",
+        id: "academy",
+        kicker: "1787",
+        title: "An academy, and a house used as a hospital",
+        partLabel: "the academy",
+        art: art("bullock-academy.jpg", "Illustration of a small academy building in the woods. Not a historical photograph."),
+        hotspots: [
+          {
+            id: "school",
+            label: "1787",
+            x: 30,
+            y: 52,
+            fact: "Three hundred yards west is the site of one of the earliest academies in upper South Carolina, established in 1787 by Dr. Alexander.",
+          },
+          {
+            id: "home",
+            label: "The house",
+            x: 74,
+            y: 48,
+            fact: "A mile and a half southwest is the site of Dr. Alexander's home, used as a hospital during the Revolution.",
+          },
+        ],
+      },
+      {
+        kind: "numbers",
+        id: "numbers",
+        kicker: "1774-1801",
+        title: "Years Dr. Alexander was pastor",
+        partLabel: "27 years",
+        value: 27,
+        unit: "years",
+        meant: "What this meant: 1801 comes 27 years after 1774. That is the stretch the marker gives for Dr. Joseph Alexander's pastorate.",
+      },
+      {
+        kind: "compare",
+        id: "compare",
+        kicker: "Then and now",
+        title: "The same ground",
+        partLabel: "then and now",
+        thenArt: art("bullock-church.jpg", "Illustration of the early church. Not a historical photograph."),
+        nowArt: art("bullock-today.jpg", "Illustration of a church and a marker. Not a photograph of the site today."),
+        thenCaption: "Illustration of a church, for the congregation organized in 1769. Not a historical photograph.",
+        nowCaption: "Illustration of a church and a marker. Not a photograph of the site today.",
+      },
+      order(
+        [
+          { id: "org", year: "1769", label: "The church is organized.", why: "The marker dates the organization to 1769." },
+          { id: "pastor", year: "1774", label: "Dr. Joseph Alexander becomes pastor.", why: "The marker dates his pastorate to 1774-1801." },
+          { id: "school", year: "1787", label: "Alexander establishes the academy.", why: "The marker dates the academy to 1787." },
+          { id: "end", year: "1801", label: "Alexander's pastorate ends.", why: "The marker says he was pastor until 1801." },
+        ],
+        ["end", "org", "school", "pastor"],
+      ),
+      takeaway([
+        "Bullock Creek Presbyterian Church was organized in 1769. Under Dr. Joseph Alexander it was a Whig stronghold in the Revolution.",
+        "He was pastor from 1774 to 1801. In 1787 he established one of the earliest academies in upper South Carolina, 300 yards west.",
+        "His home, a mile and a half southwest, was used as a hospital during the Revolution.",
+      ]),
+    ],
+  ),
+];
+

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Bookmark, MapPin, Pause, Volume2 } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
+import { LessonPlayer } from "@/components/lessons/LessonPlayer";
+import { lessonFor } from "@/data/lessons";
 import { SuggestPlate } from "@/components/suggest-plate";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,6 +80,7 @@ function MarkerLesson() {
   }
 
   const current = marker;
+  const lesson = lessonFor(current.id);
   const saved = favorites.includes(current.id);
   const text = inscription(current);
   const plates = mergePlates(accepted, platesFor(current));
@@ -226,6 +229,10 @@ function MarkerLesson() {
           Carolina Department of Archives and History.
         </p>
       </article>
+
+      {lesson ? (
+        <LessonPlayer key={current.id} lesson={lesson} directionsHref={directionsUrl(current)} />
+      ) : null}
 
       <section className="mt-8 px-4">
         <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
