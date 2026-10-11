@@ -53,7 +53,7 @@ Without `--url`, doctor reads `verify-output/palmetto/server.json` and requires 
 
 ## Drive
 
-The harness is Playwright against system Chrome (`channel: "chrome"`), viewport 390×844, `deviceScaleFactor` 1. It grants camera permission and launches Chrome with `--use-fake-device-for-media-stream` and `--use-fake-ui-for-media-stream`. It wraps `getUserMedia` and counts calls. If that device does not settle within 1.5s, the wrapper resolves a canvas `captureStream` instead, so the Open camera click can finish without hardware. Either stream is only for that click path. Plaque type-in uses the real marker index. The call count on load is still 0: the wrapper does not invoke the camera by itself.
+The harness is Playwright against system Chrome (`channel: "chrome"`), viewport 390×844, `deviceScaleFactor` 1. It grants camera permission and launches Chrome with `--use-fake-device-for-media-stream` and `--use-fake-ui-for-media-stream`. It wraps `getUserMedia` and counts calls. If that device does not settle within 1.5s, the wrapper resolves a canvas `captureStream` instead, so the Open camera click can finish without hardware. Either stream is only for that click path. Plaque type-in uses the real marker index. The wrapper does not invoke the camera by itself. Read the call count only after `/ar` has been idle for 3 seconds with no clicks and no typing. A sample taken as soon as `Open camera` appears still reads 0 when a mount timer (the retired bundle used 250ms) has not fired yet. After one `Open camera` click the count is exactly 1. The page must not show `iPhone: tap Open camera, then allow access.`
 
 Prefer these handles. The atlas pins are canvas pixels, not DOM nodes.
 
@@ -94,8 +94,8 @@ Atlas proof, in order:
 
 Scan proof, in order:
 
-1. Open `/ar`. Heading `Scan the plaque` and button `Open camera` are visible. `getUserMedia` has been called 0 times. The live `<video>` opacity is `0`. Screenshot `03-scan-camera-closed.png`.
-2. Choose `Open camera`. The fake camera starts: `getUserMedia` count is at least 1, video opacity is `1`, status is `Hold the plaque in the frame`, and button `Scan plaque` exists. Screenshot `04-scan-camera-open.png`.
+1. Open `/ar`. Wait 3 seconds with no clicks and no typing. Heading `Scan the plaque` and button `Open camera` are still visible. `getUserMedia` has been called 0 times. The live `<video>` opacity is `0`. The sentence `iPhone: tap Open camera, then allow access.` is absent. Screenshot `03-scan-camera-closed.png`.
+2. Choose `Open camera`. The fake camera starts: `getUserMedia` count is exactly 1, video opacity is `1`, status is `Hold the plaque in the frame`, and button `Scan plaque` exists. Screenshot `04-scan-camera-open.png`.
 3. Type `46-21` into the plaque field, choose the `Fort Mill` row, and require the locked card id to be `46-21` and the heading `Fort Mill`. Screenshot `05-scan-fort-mill.png`.
 4. Choose `Scan another marker`. Type `7-15`. The row and the locked card show `Penn School` and id `07-15`. Screenshot `06-scan-penn-7-15.png`.
 5. Scan another. Type `07-15`. Same marker, same id `07-15`. Screenshot `07-scan-penn-07-15.png`.
@@ -127,7 +127,7 @@ PASS  atlas: page loads — Palmetto Markers
 evidence /path/to/verify-output/palmetto
 ```
 
-Proof is the user path: a click or a typed plaque number, then the resulting screen. Do not set Zustand state, do not call `matchPlaque` from the harness, and do not treat a unit test as a substitute for the screenshot. `npm test` is an additional step, reported beside the browser steps. The fake camera is the production `getUserMedia` boundary with a synthetic device. Confirm the camera stayed closed by the call count and the video opacity, not by the button label alone.
+Proof is the user path: a click or a typed plaque number, then the resulting screen. Do not set Zustand state, do not call `matchPlaque` from the harness, and do not treat a unit test as a substitute for the screenshot. `npm test` is an additional step, reported beside the browser steps. The fake camera is the production `getUserMedia` boundary with a synthetic device. Confirm the camera stayed closed by an idle wait, then a `getUserMedia` count of 0 and a video opacity of `0`, not by the button label alone. One click that leaves the count at 2 means the camera was already requested.
 
 ## Cleanup
 

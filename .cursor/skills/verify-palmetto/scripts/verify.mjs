@@ -29,6 +29,10 @@ import { chromium } from "playwright";
 const DEFAULT_PORT = 8091;
 const ATLAS_LABEL = "South Carolina historical marker atlas";
 const PLAQUE_PLACEHOLDER = /Number on the plaque/;
+// Longer than the retired bundle's mount timer (`setTimeout(openCamera, 250)`).
+// Sampling as soon as the button appears still reads 0 calls.
+const CAMERA_IDLE_MS = 3000;
+const OLD_IPHONE_CAMERA_COPY = "iPhone: tap Open camera, then allow access.";
 
 const repoRoot = dirname(
   dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url))))),
@@ -561,6 +565,11 @@ async function gumCalls(page) {
   return page.evaluate(() => window.__palmettoVerify?.getUserMediaCalls ?? 0);
 }
 
+async function hasOldIphoneCameraCopy(page) {
+  const text = await page.locator("body").innerText();
+  return text.replace(/\s+/g, " ").includes(OLD_IPHONE_CAMERA_COPY);
+}
+
 async function liveVideoOpacity(page) {
   return page.locator("video").first().evaluate((el) => getComputedStyle(el).opacity);
 }
@@ -597,19 +606,38 @@ async function assertPlaqueHit(page, typed, name, id) {
 async function driveScan(page, shot, step) {
   const closed = await check(step, "scan: camera stays closed on load", async () => {
     await page.goto("/ar", { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.getByRole("heading", { name: "Scan the plaque" }).waitFor({ timeout: 15000 });
-    const open = page.getByRole("button", { name: "Open camera" });
-    await open.waitFor({ timeout: 8000 });
+    // The live video is in the first render. Idle after that, with no clicks
+    // and no typing, so a mount timer can call getUserMedia before we sample.
+    await page.locator("video").first().waitFor({ state: "attached", timeout: 15000 });
+    await page.waitForTimeout(CAMERA_IDLE_MS);
     const callsBefore = await gumCalls(page);
     const opacityBefore = await liveVideoOpacity(page);
+    const oldCopy = await hasOldIphoneCameraCopy(page);
+    const headingVisible = await page
+      .getByRole("heading", { name: "Scan the plaque" })
+      .isVisible()
+      .catch(() => false);
+    const openVisible = await page
+      .getByRole("button", { name: "Open camera" })
+      .isVisible()
+      .catch(() => false);
+    const problems = [];
     if (callsBefore !== 0) {
-      throw new Error(`getUserMedia ran on load (${callsBefore} call${callsBefore === 1 ? "" : "s"})`);
+      problems.push(
+        `getUserMedia was called ${callsBefore} time${callsBefore === 1 ? "" : "s"} during ${CAMERA_IDLE_MS}ms with no interaction`,
+      );
     }
     if (opacityBefore !== "0") {
-      throw new Error(`camera preview was visible on load (opacity=${opacityBefore})`);
+      problems.push(`camera preview was visible on load (opacity=${opacityBefore})`);
     }
+    if (!headingVisible) problems.push("heading Scan the plaque was not visible");
+    if (!openVisible) problems.push("button Open camera was not visible");
+    if (oldCopy) {
+      problems.push(`old copy “${OLD_IPHONE_CAMERA_COPY}” is still on the page`);
+    }
+    if (problems.length) throw new Error(problems.join("; "));
     await shot("03-scan-camera-closed.png");
-    return "Open camera is visible and getUserMedia has not run";
+    return `Open camera stayed closed for ${CAMERA_IDLE_MS}ms (getUserMedia calls=0)`;
   });
   if (!closed) {
     await shot("fail-scan-load.png").catch(() => {});
@@ -619,9 +647,12 @@ async function driveScan(page, shot, step) {
   const cameraOk = await check(step, "scan: Open camera", async () => {
     const open = page.getByRole("button", { name: "Open camera" });
     // A click during hydration is dropped. Tap again once the handler sticks.
+    // Stop as soon as getUserMedia has run so a retry cannot add a second call.
+    let clicks = 0;
     for (let i = 0; i < 5 && (await gumCalls(page)) === 0; i++) {
       if (!(await open.isVisible().catch(() => false))) break;
       await open.click();
+      clicks += 1;
       await page.waitForTimeout(400);
     }
     const hold = page.getByText("Hold the plaque in the frame");
@@ -644,7 +675,11 @@ async function driveScan(page, shot, step) {
     }
     const callsAfter = await gumCalls(page);
     const opacityAfter = await liveVideoOpacity(page);
-    if (callsAfter < 1) throw new Error("Open camera did not call getUserMedia");
+    if (callsAfter !== 1) {
+      throw new Error(
+        `Open camera called getUserMedia ${callsAfter} times after ${clicks} click${clicks === 1 ? "" : "s"}, expected exactly 1`,
+      );
+    }
     if (opacityAfter !== "1") {
       throw new Error(`camera preview stayed hidden (opacity=${opacityAfter})`);
     }
