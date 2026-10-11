@@ -13,6 +13,7 @@ import { yorkLessonsE } from "./york-e";
 import { yorkLessonsF } from "./york-f";
 import { yorkLessonsG } from "./york-g";
 import { yorkLessonsH } from "./york-h";
+import { richlandLessons } from "./richland";
 
 const LESSONS: Record<string, MarkerLesson> = {
   [pennLesson.markerId]: pennLesson,
@@ -32,6 +33,7 @@ for (const lesson of [
   ...yorkLessonsF,
   ...yorkLessonsG,
   ...yorkLessonsH,
+  ...richlandLessons,
 ]) {
   LESSONS[lesson.markerId] = lesson;
 }
