@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TOURS } from "@/data/tours";
 
 export const Route = createFileRoute("/tours")({ component: ToursPage });
@@ -11,15 +12,18 @@ function ToursPage() {
       className="min-h-dvh bg-background pb-24"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <header className="px-4 pt-5">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-          Curated
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">Tours</h1>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
-          Short drives and walks stitched from official markers. Each stop has a
-          spoken lesson and an AR scene.
-        </p>
+      <header className="flex items-start justify-between gap-3 px-4 pt-5">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
+            Curated
+          </p>
+          <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">Tours</h1>
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+            Short drives and walks stitched from official markers. Each stop has a
+            spoken lesson and an AR scene.
+          </p>
+        </div>
+        <ThemeToggle />
       </header>
       <ul className="mt-6 space-y-3 px-4">
         {TOURS.map((t) => (

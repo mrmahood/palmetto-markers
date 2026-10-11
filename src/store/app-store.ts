@@ -11,6 +11,8 @@ type Filters = {
   query: string;
 };
 
+export type AtlasTheme = "light" | "dark";
+
 type AppState = {
   markers: Marker[];
   ready: boolean;
@@ -23,6 +25,7 @@ type AppState = {
   userLoc: { lat: number; lng: number } | null;
   satellite: boolean;
   narrator: NarratorId;
+  theme: AtlasTheme;
   load: () => Promise<void>;
   setFilter: (patch: Partial<Filters>) => void;
   clearFilters: () => void;
@@ -33,6 +36,7 @@ type AppState = {
   setUserLoc: (loc: { lat: number; lng: number } | null) => void;
   setSatellite: (on: boolean) => void;
   setNarrator: (id: NarratorId) => void;
+  setTheme: (theme: AtlasTheme) => void;
 };
 
 const emptyFilters: Filters = {
@@ -62,6 +66,7 @@ export const useAppStore = create<AppState>()(
       userLoc: null,
       satellite: false,
       narrator: DEFAULT_NARRATOR,
+      theme: "light",
       load: async () => {
         if (get().ready && get().markers.length) return;
         try {
@@ -92,6 +97,7 @@ export const useAppStore = create<AppState>()(
       setUserLoc: (loc) => set({ userLoc: loc }),
       setSatellite: (on) => set({ satellite: on }),
       setNarrator: (id) => set({ narrator: id }),
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: "palmetto-markers-v1",
@@ -104,6 +110,7 @@ export const useAppStore = create<AppState>()(
         seenOnboard: s.seenOnboard,
         seenInstall: s.seenInstall,
         narrator: s.narrator,
+        theme: s.theme,
       }),
     },
   ),

@@ -130,4 +130,120 @@ export const ATLAS_CITIES: { name: string; lng: number; lat: number; major?: boo
     { name: "Fort Mill", lng: -80.945, lat: 35.007 },
     { name: "Sumter", lng: -80.342, lat: 33.92 },
     { name: "Anderson", lng: -82.65, lat: 34.503 },
+    { name: "York", lng: -81.242, lat: 34.994 },
+    { name: "Clover", lng: -81.177, lat: 35.111 },
+    { name: "Tega Cay", lng: -81.028, lat: 35.037 },
+    { name: "Lancaster", lng: -80.771, lat: 34.72 },
+    { name: "Chester", lng: -81.214, lat: 34.705 },
+    { name: "Gaffney", lng: -81.65, lat: 35.072 },
+    { name: "Camden", lng: -80.607, lat: 34.246 },
+    { name: "Summerville", lng: -80.176, lat: 33.019 },
+    { name: "Mount Pleasant", lng: -79.828, lat: 32.832 },
+    { name: "Orangeburg", lng: -80.866, lat: 33.492 },
+    { name: "Greenwood", lng: -82.162, lat: 34.189 },
+    { name: "Newberry", lng: -81.619, lat: 34.274 },
+    { name: "Seneca", lng: -82.953, lat: 34.684 },
+    { name: "Clemson", lng: -82.837, lat: 34.683 },
+    { name: "Hartsville", lng: -80.073, lat: 34.374 },
+    { name: "Conway", lng: -79.056, lat: 33.836 },
+    { name: "Lexington", lng: -81.236, lat: 33.981 },
+    { name: "North Augusta", lng: -81.965, lat: 33.502 },
+    { name: "Union", lng: -81.623, lat: 34.715 },
+    { name: "Cheraw", lng: -79.883, lat: 34.698 },
   ];
+
+/** Water names that explain the piedmont, not just the big cities. */
+export const WATER_LABELS: { name: string; lng: number; lat: number }[] = [
+  { name: "Lake Wylie", lng: -81.03, lat: 35.095 },
+  { name: "Lake Murray", lng: -81.33, lat: 34.065 },
+  { name: "Lake Marion", lng: -80.35, lat: 33.45 },
+  { name: "Lake Moultrie", lng: -80.05, lat: 33.3 },
+];
+
+export const RIVER_LABELS: { name: string; lng: number; lat: number; major?: boolean }[] = [
+  { name: "Catawba River", lng: -80.984, lat: 34.992, major: true },
+  { name: "Wateree", lng: -80.62, lat: 34.12 },
+  { name: "Congaree", lng: -80.85, lat: 33.88 },
+  { name: "Santee", lng: -79.85, lat: 33.42 },
+  { name: "Pee Dee", lng: -79.55, lat: 34.15 },
+  { name: "Savannah", lng: -81.75, lat: 33.35 },
+  { name: "Broad", lng: -81.48, lat: 34.55 },
+  { name: "Saluda", lng: -81.85, lat: 34.25 },
+  { name: "Edisto", lng: -80.55, lat: 33.05 },
+  { name: "Ashley", lng: -80.15, lat: 32.95 },
+  { name: "Cooper", lng: -79.93, lat: 33.0 },
+  { name: "Waccamaw", lng: -79.05, lat: 33.55 },
+];
+
+export type AtlasLandmark = {
+  id: string;
+  name: string;
+  note: string;
+  lng: number;
+  lat: number;
+  minZ: number;
+};
+
+/**
+ * Carhartt's marker sits on the Rock Hill bluff. Fort Mill is on the
+ * opposite bank of the Catawba, so the callout has to survive clustering.
+ */
+export const ATLAS_LANDMARKS: AtlasLandmark[] = [
+  {
+    id: "46-82",
+    name: "Carhartt Mansion",
+    note: "York County · west bank, across from Fort Mill",
+    lng: -80.95815,
+    lat: 34.97315,
+    minZ: 3.4,
+  },
+];
+
+export const PLACE_NOTES: Record<string, string> = {
+  "46-82":
+    "York County, on the west bank of the Catawba — across the river from Fort Mill.",
+};
+
+export type RiverData = { name: string; paths: LngLat[][] };
+
+const MAJOR_RIVERS = new Set([
+  "Catawba",
+  "Savannah",
+  "Pee Dee",
+  "Santee",
+  "Congaree",
+  "Wateree",
+  "Broad",
+  "Saluda",
+  "Edisto",
+  "Cooper",
+  "Ashley",
+  "Waccamaw",
+]);
+
+export function isMajorRiver(name: string) {
+  return MAJOR_RIVERS.has(name);
+}
+
+let riverCache: RiverData[] | null = null;
+let riverInflight: Promise<RiverData[]> | null = null;
+
+export function loadRivers(): Promise<RiverData[]> {
+  if (riverCache) return Promise.resolve(riverCache);
+  if (!riverInflight) {
+    riverInflight = fetch("/data/rivers.json")
+      .then((r) => {
+        if (!r.ok) throw new Error("Could not load rivers");
+        return r.json() as Promise<RiverData[]>;
+      })
+      .then((data) => {
+        riverCache = data;
+        return data;
+      })
+      .catch(() => {
+        riverCache = [];
+        return riverCache;
+      });
+  }
+  return riverInflight;
+}

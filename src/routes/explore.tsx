@@ -4,6 +4,7 @@ import { Bookmark, ChevronRight, Search } from "lucide-react";
 import { AuthChip } from "@/components/auth-chip";
 import { BottomNav } from "@/components/bottom-nav";
 import { InstallHint } from "@/components/install-hint";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ERA_LABEL, heroImage, REGION_ORDER, THEME_LABEL } from "@/lib/markers";
 import { cn } from "@/lib/utils";
 import { selectFiltered, useAppStore } from "@/store/app-store";
@@ -47,6 +48,7 @@ function ExplorePage() {
             </h1>
           </div>
           <div className="mt-1 flex items-center gap-2">
+            <ThemeToggle />
             <AuthChip next="/explore" />
             <Link
               to="/saved"

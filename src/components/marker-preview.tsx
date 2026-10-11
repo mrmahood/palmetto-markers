@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Bookmark, MapPin, ScanLine, Volume2, X } from "lucide-react";
 import type { Marker } from "@/lib/markers";
 import { ERA_LABEL, heroImage } from "@/lib/markers";
+import { PLACE_NOTES } from "@/lib/sc-geo";
 import { formatKm } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,11 @@ export function MarkerPreview({ marker, km, onClose }: Props) {
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">
               {marker.front}
             </p>
+            {PLACE_NOTES[marker.id] ? (
+              <p className="mt-1 text-xs font-medium leading-snug text-foreground">
+                {PLACE_NOTES[marker.id]}
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-t border-border p-3">

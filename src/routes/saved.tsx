@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 import { AuthChip } from "@/components/auth-chip";
 import { BottomNav } from "@/components/bottom-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { heroImage } from "@/lib/markers";
 import { canReviewQueue } from "@/lib/sources";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -54,7 +55,10 @@ function SavedPage() {
           </p>
           <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">Saved</h1>
         </div>
-        <AuthChip next="/saved" />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <AuthChip next="/saved" />
+        </div>
       </header>
       {editor ? (
         <p className="px-4 pt-3">

@@ -3,16 +3,24 @@ import type { Marker } from "@/lib/markers";
 import { SC_BOUNDS, SC_CENTER } from "@/lib/geo";
 import {
   ATLAS_CITIES,
+  ATLAS_LANDMARKS,
+  RIVER_LABELS,
   SC_FALLBACK,
+  WATER_LABELS,
   centroid,
+  isMajorRiver,
+  loadRivers,
   loadScMap,
   type Geom,
+  type RiverData,
   type ScMapData,
 } from "@/lib/sc-geo";
+import type { AtlasTheme } from "@/store/app-store";
 
 type Props = {
   markers: Marker[];
   satellite: boolean;
+  theme: AtlasTheme;
   selectedId: string | null;
   userLoc: { lat: number; lng: number } | null;
   onSelect: (id: string | null) => void;
@@ -36,38 +44,142 @@ type Cluster = {
 
 const COS = Math.cos((SC_CENTER[1] * Math.PI) / 180);
 const INSET = { top: 92, right: 16, bottom: 104, left: 16 };
-const PAL = {
+type Palette = {
+  ocean0: string;
+  ocean1: string;
+  neighbor: string;
+  land: string;
+  county: string;
+  shore: string;
+  pin: string;
+  pinStroke: string;
+  cluster: string;
+  clusterHi: string;
+  text: string;
+  muted: string;
+  user: string;
+  river: string;
+  riverMajor: string;
+  chip: string;
+  chipText: string;
+  washes: string[];
+  york: string;
+  landmark: string;
+};
+
+const PAL: { ink: Palette; earth: Palette; day: Palette; terrain: Palette } = {
   ink: {
-    ocean0: "#121a16",
-    ocean1: "#0c110f",
-    neighbor: "#141c18",
-    land: "#1d2a24",
-    county: "rgba(236,231,220,0.16)",
-    shore: "#7f9c8a",
-    pin: "#ece7dc",
-    pinStroke: "#7f9c8a",
+    ocean0: "#16303a",
+    ocean1: "#10242c",
+    neighbor: "#1a2824",
+    land: "#24352c",
+    county: "rgba(243,238,228,0.2)",
+    shore: "#9dccb0",
+    pin: "#f3eee4",
+    pinStroke: "#9dccb0",
     cluster: "#3d5c4c",
-    clusterHi: "#7f9c8a",
-    text: "#ece7dc",
-    muted: "rgba(236,231,220,0.55)",
-    user: "#7f9c8a",
+    clusterHi: "#9dccb0",
+    text: "#f3eee4",
+    muted: "rgba(243,238,228,0.62)",
+    user: "#7eb6e8",
+    river: "#7eb8d4",
+    riverMajor: "#b7e3f5",
+    chip: "rgba(16,24,21,0.92)",
+    chipText: "#f3eee4",
+    washes: ["#2a3b32", "#24362e", "#2c3830", "#26342c"],
+    york: "#3d4a32",
+    landmark: "#e7b15a",
   },
   earth: {
-    ocean0: "#1c1912",
-    ocean1: "#12100c",
-    neighbor: "#1a1810",
-    land: "#2a3324",
-    county: "rgba(236,220,180,0.18)",
-    shore: "#c4b896",
+    ocean0: "#243028",
+    ocean1: "#1a2420",
+    neighbor: "#22281c",
+    land: "#3a4634",
+    county: "rgba(240,230,200,0.2)",
+    shore: "#d2c4a2",
     pin: "#f0e6c8",
     pinStroke: "#8a9a6e",
     cluster: "#4a5538",
-    clusterHi: "#a3b07c",
+    clusterHi: "#c6d2a4",
     text: "#f0e6c8",
-    muted: "rgba(240,230,200,0.55)",
+    muted: "rgba(240,230,200,0.62)",
     user: "#a3b07c",
+    river: "#6a9eb4",
+    riverMajor: "#9fd0e4",
+    chip: "rgba(22,24,16,0.92)",
+    chipText: "#f0e6c8",
+    washes: ["#3e4a36", "#445238", "#3a4632", "#4a4634"],
+    york: "#5a6240",
+    landmark: "#e7b15a",
+  },
+  day: {
+    ocean0: "#c5e4f6",
+    ocean1: "#a9d4ee",
+    neighbor: "#d5e6d4",
+    land: "#f7f1e4",
+    county: "rgba(31,90,58,0.45)",
+    shore: "#1f6b45",
+    pin: "#d4532c",
+    pinStroke: "#fffaf3",
+    cluster: "#1f7a4d",
+    clusterHi: "#16603c",
+    text: "#1c2822",
+    muted: "rgba(28,40,34,0.62)",
+    user: "#1d6fbf",
+    river: "#3d94c8",
+    riverMajor: "#1468a8",
+    chip: "rgba(255,250,243,0.96)",
+    chipText: "#1c2822",
+    washes: ["#e5f3d4", "#f6e4c4", "#dceee6", "#f6ddd2", "#e3eef8", "#efe7c4"],
+    york: "#f0d48a",
+    landmark: "#9a3412",
+  },
+  terrain: {
+    ocean0: "#d5ead2",
+    ocean1: "#c3dfc4",
+    neighbor: "#dce8d4",
+    land: "#e7f0c8",
+    county: "rgba(40,80,40,0.4)",
+    shore: "#2f6a32",
+    pin: "#c2410c",
+    pinStroke: "#fffaf3",
+    cluster: "#3f6b28",
+    clusterHi: "#2f5a18",
+    text: "#1c2820",
+    muted: "rgba(28,40,32,0.62)",
+    user: "#1d6fbf",
+    river: "#2f86c0",
+    riverMajor: "#0f5f98",
+    chip: "rgba(247,252,240,0.96)",
+    chipText: "#1c2820",
+    washes: ["#d7ebb0", "#e7e2a4", "#cfe6c4", "#e8d8b0", "#d4e4c8", "#efe0b4"],
+    york: "#efd078",
+    landmark: "#9a3412",
   },
 };
+
+function catawbaFrame(kf: number, w: number, h: number): Camera {
+  const minLng = -81.035;
+  const maxLng = -80.88;
+  const minLat = 34.945;
+  const maxLat = 35.038;
+  const vw = Math.max(80, w - INSET.left - INSET.right);
+  const vh = Math.max(120, h - INSET.top - INSET.bottom);
+  const k =
+    Math.min(vw / ((maxLng - minLng) * COS), vh / (maxLat - minLat)) * 0.92;
+  return {
+    cx: (minLng + maxLng) / 2,
+    cy: (minLat + maxLat) / 2 - 0.012,
+    k: clamp(k, kf * 2, kf * 40),
+  };
+}
+
+function countyWash(name: string, pal: Palette) {
+  if (name === "York") return pal.york;
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 33 + name.charCodeAt(i)) >>> 0;
+  return pal.washes[h % pal.washes.length];
+}
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
@@ -130,6 +242,7 @@ function drawGeom(
 export function MapCanvas({
   markers,
   satellite,
+  theme,
   selectedId,
   userLoc,
   onSelect,
@@ -142,6 +255,7 @@ export function MapCanvas({
   const propsRef = useRef({
     markers,
     satellite,
+    theme,
     selectedId,
     userLoc,
     onSelect,
@@ -149,7 +263,17 @@ export function MapCanvas({
     onVisible,
     flyTo,
   });
-  propsRef.current = { markers, satellite, selectedId, userLoc, onSelect, onStack, onVisible, flyTo };
+  propsRef.current = {
+    markers,
+    satellite,
+    theme,
+    selectedId,
+    userLoc,
+    onSelect,
+    onStack,
+    onVisible,
+    flyTo,
+  };
 
   const camRef = useRef<Camera>({
     cx: SC_CENTER[0],
@@ -157,6 +281,8 @@ export function MapCanvas({
     k: 180,
   });
   const geoRef = useRef<ScMapData>(SC_FALLBACK);
+  const riversRef = useRef<RiverData[]>([]);
+  const landmarkHitsRef = useRef<{ x: number; y: number; id: string; name: string }[]>([]);
   const clustersRef = useRef<Cluster[]>([]);
   const hoverRef = useRef<Cluster | null>(null);
   const fittedRef = useRef(false);
@@ -186,7 +312,11 @@ export function MapCanvas({
     let raf = 0;
     let dirty = true;
 
-    const palOf = () => (propsRef.current.satellite ? PAL.earth : PAL.ink);
+    const palOf = () => {
+      const { satellite: sat, theme: mode } = propsRef.current;
+      if (sat) return mode === "dark" ? PAL.earth : PAL.terrain;
+      return mode === "dark" ? PAL.ink : PAL.day;
+    };
 
     function kRange() {
       const kf = kFitRef.current;
@@ -282,13 +412,22 @@ export function MapCanvas({
       return pins;
     }
 
+    function landmarkIdsOn(z: number) {
+      const ids = new Set<string>();
+      for (const lm of ATLAS_LANDMARKS) if (z >= lm.minZ) ids.add(lm.id);
+      return ids;
+    }
+
     function buildClusters(): Cluster[] {
       const { markers: list, selectedId: sel } = propsRef.current;
       const cam = camRef.current;
       const cell = clusterCell();
+      const z = cam.k / kFitRef.current;
+      const hide = landmarkIdsOn(z);
       const out: Cluster[] = [];
       if (!cell) {
         for (const m of list) {
+          if (hide.has(m.id)) continue;
           const p = project(cam, size.w, size.h, m.lng, m.lat);
           if (p.x < -24 || p.y < -24 || p.x > size.w + 24 || p.y > size.h + 24) continue;
           out.push({
@@ -306,6 +445,7 @@ export function MapCanvas({
       }
       const buckets = new Map<string, Cluster>();
       for (const m of list) {
+        if (hide.has(m.id)) continue;
         const p = project(cam, size.w, size.h, m.lng, m.lat);
         if (p.x < -40 || p.y < -40 || p.x > size.w + 40 || p.y > size.h + 40) continue;
         if (m.id === sel) continue;
@@ -346,6 +486,20 @@ export function MapCanvas({
     }
 
     function hit(x: number, y: number): Cluster | null {
+      for (const lm of landmarkHitsRef.current) {
+        if (Math.hypot(lm.x - x, lm.y - y) < 26) {
+          return {
+            x: lm.x,
+            y: lm.y,
+            count: 1,
+            id: lm.id,
+            ids: [lm.id],
+            lng: 0,
+            lat: 0,
+            name: lm.name,
+          };
+        }
+      }
       const near = hitsNear(x, y, 34);
       if (near[0]) return near[0];
       let best: Cluster | null = null;
@@ -381,11 +535,13 @@ export function MapCanvas({
       ctx.lineCap = "round";
 
       ctx.fillStyle = pal.neighbor;
-      ctx.strokeStyle = "rgba(236,231,220,0.06)";
+      ctx.strokeStyle = pal.shore;
+      ctx.globalAlpha = 0.18;
       ctx.lineWidth = 1;
       for (const n of geo.neighbors) {
         drawGeom(ctx, n.geometry, cam, w, h, "both");
       }
+      ctx.globalAlpha = 1;
 
       ctx.fillStyle = pal.land;
       ctx.strokeStyle = pal.shore;
@@ -393,9 +549,12 @@ export function MapCanvas({
       drawGeom(ctx, geo.state.geometry, cam, w, h, "fill");
 
       if (geo.counties.length) {
-        ctx.fillStyle = "transparent";
+        for (const c of geo.counties) {
+          ctx.fillStyle = countyWash(c.properties.name, pal);
+          drawGeom(ctx, c.geometry, cam, w, h, "fill");
+        }
         ctx.strokeStyle = pal.county;
-        ctx.lineWidth = z > 2 ? 1 : 0.7;
+        ctx.lineWidth = z > 2 ? 1.15 : 0.8;
         for (const c of geo.counties) {
           drawGeom(ctx, c.geometry, cam, w, h, "stroke");
         }
@@ -407,30 +566,105 @@ export function MapCanvas({
       drawGeom(ctx, geo.state.geometry, cam, w, h, "stroke");
       ctx.globalAlpha = 1;
 
-      ctx.font = "500 11px Figtree, system-ui, sans-serif";
+      const rivers = riversRef.current;
+      if (rivers.length) {
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        for (const river of rivers) {
+          const major = isMajorRiver(river.name);
+          if (!major && z < 2.2) continue;
+          ctx.strokeStyle = major ? pal.riverMajor : pal.river;
+          ctx.globalAlpha = major ? 0.95 : 0.72;
+          ctx.lineWidth = major ? (z > 8 ? 4.6 : z > 5 ? 3.2 : z > 2 ? 2.2 : 1.6) : z > 6 ? 1.5 : 0.9;
+          ctx.beginPath();
+          for (const path of river.paths) {
+            if (path.length < 2) continue;
+            if (!major && path.length < 6 && z < 4) continue;
+            for (let i = 0; i < path.length; i++) {
+              const p = project(cam, w, h, path[i][0], path[i][1]);
+              if (i === 0) ctx.moveTo(p.x, p.y);
+              else ctx.lineTo(p.x, p.y);
+            }
+          }
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
+      if (z > 0.9) {
+        ctx.font = "italic 600 12px Fraunces, Georgia, serif";
+        for (const river of RIVER_LABELS) {
+          if (river.name.startsWith("Catawba") && z < 3.2) continue;
+          if (!river.major && z < 2.4) continue;
+          const p = project(cam, w, h, river.lng, river.lat);
+          if (p.x < 36 || p.y < 78 || p.x > w - 36 || p.y > h - 86) continue;
+          ctx.fillStyle = pal.riverMajor;
+          ctx.globalAlpha = river.major ? 1 : 0.8;
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = pal.chip;
+          ctx.strokeText(river.name, p.x, p.y);
+          ctx.fillText(river.name, p.x, p.y);
+        }
+        if (z > 2.2) {
+          ctx.font = "italic 500 11px Fraunces, Georgia, serif";
+          for (const lake of WATER_LABELS) {
+            const p = project(cam, w, h, lake.lng, lake.lat);
+            if (p.x < 36 || p.y < 78 || p.x > w - 36 || p.y > h - 86) continue;
+            ctx.fillStyle = pal.river;
+            ctx.globalAlpha = 0.9;
+            ctx.fillText(lake.name, p.x, p.y);
+          }
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.font = "500 11px Figtree, system-ui, sans-serif";
       ctx.fillStyle = pal.muted;
-      if (z > 2.2 && geo.counties.length) {
+      if (z > 1.55 && geo.counties.length) {
         for (const c of geo.counties) {
           const [lng, lat] = centroid(c.geometry);
           const p = project(cam, w, h, lng, lat);
           if (p.x < 40 || p.y < 80 || p.x > w - 40 || p.y > h - 80) continue;
-          ctx.fillText(c.properties.name, p.x, p.y);
+          const york = c.properties.name === "York";
+          ctx.font = york
+            ? "600 12px Figtree, system-ui, sans-serif"
+            : "500 11px Figtree, system-ui, sans-serif";
+          ctx.fillStyle = york ? pal.text : pal.muted;
+          ctx.fillText(york ? "York County" : c.properties.name, p.x, p.y);
         }
       }
 
       ctx.font = "600 11px Figtree, system-ui, sans-serif";
       for (const city of ATLAS_CITIES) {
-        if (!city.major && z < 1.5) continue;
+        if (!city.major && z < 1.45) continue;
+        if (!city.major && z < 2.6 && city.name !== "Fort Mill" && city.name !== "Rock Hill") {
+          continue;
+        }
         const p = project(cam, w, h, city.lng, city.lat);
         if (p.x < 24 || p.y < 72 || p.x > w - 24 || p.y > h - 90) continue;
         ctx.fillStyle = pal.text;
-        ctx.globalAlpha = city.major ? 0.8 : 0.55;
+        ctx.globalAlpha = city.major || city.name === "Fort Mill" ? 0.95 : 0.7;
         ctx.beginPath();
-        ctx.arc(p.x, p.y + 10, 1.4, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y + 11, city.name === "Fort Mill" ? 2.4 : 1.4, 0, Math.PI * 2);
         ctx.fill();
+        const fort = city.name === "Fort Mill" && z >= 3.4;
+        ctx.font = fort
+          ? "700 14px Figtree, system-ui, sans-serif"
+          : "600 11px Figtree, system-ui, sans-serif";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = pal.chip;
+        ctx.strokeText(city.name, p.x, p.y);
         ctx.fillText(city.name, p.x, p.y);
+        if (fort) {
+          ctx.font = "600 11px Figtree, system-ui, sans-serif";
+          ctx.fillStyle = pal.riverMajor;
+          ctx.strokeStyle = pal.chip;
+          ctx.lineWidth = 3;
+          ctx.strokeText("east of the Catawba", p.x, p.y - 15);
+          ctx.fillText("east of the Catawba", p.x, p.y - 15);
+        }
       }
       ctx.globalAlpha = 1;
 
@@ -471,7 +705,7 @@ export function MapCanvas({
           ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
-          ctx.fillStyle = pal.pin;
+          ctx.fillStyle = propsRef.current.theme === "light" ? pal.pinStroke : pal.pin;
           ctx.font = "600 11px Figtree, system-ui, sans-serif";
           ctx.fillText(c.count > 999 ? `${Math.round(c.count / 100) / 10}k` : String(c.count), c.x, c.y);
         }
@@ -497,17 +731,35 @@ export function MapCanvas({
           ctx.fill();
           ctx.stroke();
           if (m.name) {
+            const lm = ATLAS_LANDMARKS.find((item) => item.id === m.id);
             const label = m.name.length > 32 ? `${m.name.slice(0, 30)}…` : m.name;
+            const note = lm?.note;
             ctx.font = "600 12px Figtree, system-ui, sans-serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
             const tw = ctx.measureText(label).width;
-            ctx.fillStyle = "rgba(12,17,15,0.92)";
+            let nw = 0;
+            if (note) {
+              ctx.font = "500 11px Figtree, system-ui, sans-serif";
+              nw = ctx.measureText(note).width;
+            }
+            const boxW = Math.max(tw, nw) + 14;
+            const boxH = note ? 36 : 22;
+            ctx.fillStyle = pal.chip;
+            ctx.strokeStyle = pal.county;
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.roundRect(p.x + 12, p.y - 11, tw + 12, 22, 8);
+            ctx.roundRect(p.x + 12, p.y - boxH / 2, boxW, boxH, 8);
             ctx.fill();
-            ctx.fillStyle = pal.pin;
-            ctx.fillText(label, p.x + 18, p.y);
+            ctx.stroke();
+            ctx.fillStyle = pal.chipText;
+            ctx.font = "600 12px Figtree, system-ui, sans-serif";
+            ctx.fillText(label, p.x + 19, note ? p.y - 7 : p.y);
+            if (note) {
+              ctx.font = "500 11px Figtree, system-ui, sans-serif";
+              ctx.fillStyle = pal.riverMajor;
+              ctx.fillText(note, p.x + 19, p.y + 8);
+            }
             ctx.textAlign = "center";
           }
         }
@@ -532,17 +784,112 @@ export function MapCanvas({
       }
 
       const hover = hoverRef.current;
-      if (hover?.name && hover.count === 1) {
+      if (hover?.name && hover.count === 1 && hover.id !== propsRef.current.selectedId) {
         ctx.font = "500 12px Figtree, system-ui, sans-serif";
         const tw = ctx.measureText(hover.name).width;
         const bx = hover.x;
         const by = hover.y - 18;
-        ctx.fillStyle = "rgba(12,17,15,0.88)";
+        ctx.fillStyle = pal.chip;
+        ctx.strokeStyle = pal.county;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.roundRect(bx - tw / 2 - 8, by - 11, tw + 16, 22, 8);
         ctx.fill();
-        ctx.fillStyle = pal.pin;
+        ctx.stroke();
+        ctx.fillStyle = pal.chipText;
         ctx.fillText(hover.name, bx, by);
+      }
+
+      const lmHits: { x: number; y: number; id: string; name: string }[] = [];
+      const selectedNow = propsRef.current.selectedId;
+      for (const lm of ATLAS_LANDMARKS) {
+        if (z < lm.minZ) continue;
+        const p = project(cam, w, h, lm.lng, lm.lat);
+        if (p.x < -20 || p.y < 60 || p.x > w + 20 || p.y > h - 70) continue;
+        lmHits.push({ x: p.x, y: p.y, id: lm.id, name: lm.name });
+        ctx.beginPath();
+        ctx.fillStyle = pal.landmark;
+        ctx.strokeStyle = pal.pinStroke;
+        ctx.lineWidth = 2;
+        ctx.moveTo(p.x, p.y - 11);
+        ctx.lineTo(p.x + 8, p.y);
+        ctx.lineTo(p.x, p.y + 11);
+        ctx.lineTo(p.x - 8, p.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        if (lm.id === selectedNow) continue;
+        const showNote = true;
+        ctx.font = "600 12px Figtree, system-ui, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const title = lm.name;
+        const tw = ctx.measureText(title).width;
+        let nw = 0;
+        if (showNote) {
+          ctx.font = "500 11px Figtree, system-ui, sans-serif";
+          nw = ctx.measureText(lm.note).width;
+        }
+        const boxW = Math.max(tw, nw) + 14;
+        const boxH = showNote ? 36 : 22;
+        let bx = p.x - boxW - 16;
+        let by = p.y - 4;
+        if (bx < 8) bx = p.x + 14;
+        if (by + boxH > h - 78) by = p.y - boxH - 10;
+        if (by < 78) by = 78;
+        ctx.strokeStyle = pal.landmark;
+        ctx.globalAlpha = 0.85;
+        ctx.lineWidth = 1.25;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(bx < p.x ? bx + boxW : bx, by + boxH / 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = pal.chip;
+        ctx.strokeStyle = pal.landmark;
+        ctx.lineWidth = 1.25;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, boxW, boxH, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = pal.chipText;
+        ctx.font = "600 12px Figtree, system-ui, sans-serif";
+        ctx.fillText(title, bx + 7, showNote ? by + 12 : by + boxH / 2);
+        if (showNote) {
+          ctx.font = "500 11px Figtree, system-ui, sans-serif";
+          ctx.fillStyle = pal.riverMajor;
+          ctx.fillText(lm.note, bx + 7, by + 26);
+        }
+        ctx.textAlign = "center";
+      }
+      landmarkHitsRef.current = lmHits;
+
+      if (z >= 8) {
+        ctx.font = "500 10px Figtree, system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const placed: { x: number; y: number }[] = [];
+        const ranked = [...propsRef.current.markers].sort((a, b) => {
+          const pa = project(cam, w, h, a.lng, a.lat);
+          const pb = project(cam, w, h, b.lng, b.lat);
+          const da = Math.hypot(pa.x - w / 2, pa.y - h / 2);
+          const db = Math.hypot(pb.x - w / 2, pb.y - h / 2);
+          return da - db;
+        });
+        let drawn = 0;
+        for (const m of ranked) {
+          if (drawn >= 28) break;
+          if (m.id === selectedNow) continue;
+          if (lmHits.some((lm) => lm.id === m.id)) continue;
+          const p = project(cam, w, h, m.lng, m.lat);
+          if (p.x < 28 || p.y < 86 || p.x > w - 28 || p.y > h - 96) continue;
+          if (placed.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 46)) continue;
+          const label = m.name.length > 22 ? `${m.name.slice(0, 20)}…` : m.name;
+          ctx.fillStyle = pal.muted;
+          ctx.fillText(label, p.x, p.y + 16);
+          placed.push(p);
+          drawn += 1;
+        }
       }
 
       const pxPerKm = cam.k / 110.574;
@@ -754,6 +1101,10 @@ export function MapCanvas({
       geoRef.current = data;
       dirty = true;
     });
+    void loadRivers().then((data) => {
+      riversRef.current = data;
+      dirty = true;
+    });
 
     return () => {
       cancelAnim();
@@ -771,7 +1122,7 @@ export function MapCanvas({
 
   useEffect(() => {
     drawRef.current();
-  }, [markers, satellite, selectedId, userLoc]);
+  }, [markers, satellite, theme, selectedId, userLoc]);
 
   useEffect(() => {
     if (!flyTo) return;
@@ -788,6 +1139,11 @@ export function MapCanvas({
     const m = markers.find((x) => x.id === selectedId);
     if (!m) return;
     const kf = kFitRef.current;
+    const wrap = wrapRef.current;
+    if (m.id === "46-82" && wrap) {
+      easeToRef.current(catawbaFrame(kf, wrap.clientWidth, wrap.clientHeight), 640);
+      return;
+    }
     easeToRef.current(
       {
         cx: m.lng,
@@ -827,6 +1183,11 @@ export function MapCanvas({
     const vw = Math.max(80, w - INSET.left - INSET.right);
     const vh = Math.max(80, h - INSET.top - INSET.bottom);
     const kf = kFitRef.current;
+    if (markers.length === 1 && markers[0].id === "46-82") {
+      easeToRef.current(catawbaFrame(kf, w, h), 700);
+      propsRef.current.onSelect(markers[0].id);
+      return;
+    }
     if (!tight) {
       easeToRef.current(
         {

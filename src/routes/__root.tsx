@@ -1,6 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { ThemeSync } from "@/components/theme-toggle";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Palmetto Markers";
@@ -20,7 +21,7 @@ export const Route = createRootRoute({
         content:
           "A field guide to every official South Carolina historical marker — map, spoken lessons, and plaque scan.",
       },
-      { name: "theme-color", content: "#0c110f" },
+      { name: "theme-color", content: "#f4efe4" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
     ],
     links: [
@@ -48,7 +49,14 @@ function RootDocument() {
         <HeadContent />
       </head>
       <body className="bg-background text-foreground">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{var t=JSON.parse(localStorage.getItem("palmetto-markers-v1")||"{}");var th=t&&t.state&&t.state.theme;if(th==="dark"||th==="light")document.documentElement.setAttribute("data-theme",th);}catch(e){}})();',
+          }}
+        />
         <PreviewHostBridge />
+        <ThemeSync />
         <AuthProvider>
           <Outlet />
         </AuthProvider>

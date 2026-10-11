@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/bottom-nav";
 import { MapCanvas } from "@/components/map-canvas";
 import { MarkerPreview } from "@/components/marker-preview";
 import { Onboarding } from "@/components/onboarding";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { ERA_LABEL, MARKER_COUNT, REGION_ORDER } from "@/lib/markers";
 import { haversineKm } from "@/lib/geo";
@@ -25,6 +26,7 @@ function MapHome() {
   const setUserLoc = useAppStore((s) => s.setUserLoc);
   const satellite = useAppStore((s) => s.satellite);
   const setSatellite = useAppStore((s) => s.setSatellite);
+  const theme = useAppStore((s) => s.theme);
 
   const [mounted, setMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -76,6 +78,7 @@ function MapHome() {
         <MapCanvas
           markers={filtered}
           satellite={satellite}
+          theme={theme}
           selectedId={selectedId}
           userLoc={userLoc}
           onSelect={(id) => {
@@ -162,6 +165,7 @@ function MapHome() {
       </header>
 
       <div className="absolute right-3 top-[7.5rem] z-20 flex flex-col gap-2">
+        <ThemeToggle className="bg-elevated/95" />
         <Button
           variant="secondary"
           size="icon"

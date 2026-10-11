@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0c110f;
-  --color-foreground: #ece7dc;
-  --color-elevated: #151c18;
-  --color-subtle: #1d2621;
-  --color-muted: #9a9388;
-  --color-accent: #7f9c8a;
-  --color-accent-foreground: #0c110f;
-  --color-border: color-mix(in oklab, #ece7dc 12%, transparent);
-  --color-border-strong: color-mix(in oklab, #ece7dc 22%, transparent);
-  --color-ring: #7f9c8a;
-  --color-card: #151c18;
-  --color-card-foreground: #ece7dc;
-  --color-destructive: #c45c4a;
+  --color-background: #f4efe4;
+  --color-foreground: #1c2822;
+  --color-elevated: #fffaf3;
+  --color-subtle: #e5f0e2;
+  --color-muted: #5c6b62;
+  --color-accent: #1f7a4d;
+  --color-accent-foreground: #f4fff7;
+  --color-border: #1c28221f;
+  --color-border-strong: #1c282238;
+  --color-ring: #1f7a4d;
+  --color-card: #fffaf3;
+  --color-card-foreground: #1c2822;
+  --color-destructive: #b8432f;
 
   --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
@@ -31,10 +31,31 @@
   --motion-slow: 400ms;
 }
 
+:root[data-theme="dark"] {
+  --color-background: #121916;
+  --color-foreground: #f3eee4;
+  --color-elevated: #1c2621;
+  --color-subtle: #26332c;
+  --color-muted: #b3aa9e;
+  --color-accent: #9dccb0;
+  --color-accent-foreground: #10211a;
+  --color-border: #f3eee429;
+  --color-border-strong: #f3eee447;
+  --color-ring: #9dccb0;
+  --color-card: #1c2621;
+  --color-card-foreground: #f3eee4;
+  --color-destructive: #e07a68;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color-scheme: light;
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
   }
 
   html,
