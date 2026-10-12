@@ -63,6 +63,7 @@ Prefer these handles. The atlas pins are canvas pixels, not DOM nodes.
 | Atlas surface | `role=application` named `South Carolina historical marker atlas` |
 | Marker count | text matching `official South Carolina markers` |
 | Marker details sheet | `article` that contains button `Lesson`, an `h2` name, and a line like `46-21 · Early Republic` |
+| Map theme | button `Switch to dark mode`, then button `Switch to light mode` |
 | Dense tap result | text matching `markers here`, then the first button in that `z-30` sheet |
 | Scan page | heading `Scan the plaque` at `/ar` |
 | Camera | button `Open camera`, then button `Scan plaque`, status `Hold the plaque in the frame` |
@@ -88,9 +89,10 @@ node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature tours --u
 
 Atlas proof, in order:
 
-1. Open `/`. If the cover is up, choose `Open the atlas`. The canvas and the official-marker count are visible.
-2. Sample the canvas. Cluster fills (`#3d5c4c` / earth `#4a5538`) must be present. Shore color alone does not count. Screenshot `01-atlas-loaded.png`.
-3. Click a rendered cluster or pin (only when `elementFromPoint` is the canvas). A cluster zooms; at a close zoom it opens the `markers here` sheet. A single pin, or a row in that sheet, opens the details article. Screenshot `02-atlas-marker-details.png`. The article shows a marker name and an id of the form `NN-NN` or `NN-NNN`.
+1. Open `/`. If the cover is up, choose `Open the atlas`. The canvas and the official-marker count are visible. The map starts in light mode.
+2. Sample the canvas. Light cluster fills `#1f7a4d` and `#16603c` must be present. Cream land `#f7f1e4` is not a pin. Shore `#1f6b45` does not count. Screenshot `01-atlas-loaded.png`.
+3. Choose `Switch to dark mode`. Dark cluster fill `#3d5c4c` must be present (earth `#4a5538` when satellite is also on). The shore highlight is not a cluster. Screenshot `01-atlas-dark.png`. Choose `Switch to light mode` and require the light cluster fills again.
+4. Click a rendered cluster or pin (only when `elementFromPoint` is the canvas). A cluster zooms; at a close zoom it opens the `markers here` sheet. A single pin, or a row in that sheet, opens the details article. Screenshot `02-atlas-marker-details.png`. The article shows a marker name and an id of the form `NN-NN` or `NN-NNN`.
 
 Scan proof, in order:
 
@@ -108,8 +110,8 @@ The feature map lists lesson, explore, and tours as well. Drive those with the `
 
 Every `run` and `drive` writes to `verify-output/palmetto/` (override with `--out`). The directory is gitignored. Cleanup does not delete it.
 
-- `01-atlas-loaded.png` through `07-scan-penn-07-15.png` for the required flows
-- `08-lesson-fort-mill.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
+- `01-atlas-loaded.png`, `01-atlas-dark.png`, and `02-atlas-marker-details.png` through `07-scan-penn-07-15.png` for the required flows
+- `08-lesson-fort-mill.png`, `08-lesson-fort-mill-hands-on.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
 - `fail-<step>.png` when a step fails
 - `session.webm` unless `--no-video`
 - `summary.json` and a PASS/FAIL list on stdout

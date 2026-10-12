@@ -331,6 +331,7 @@ async function sampleAtlas(page) {
     const bottom = height - Math.round(130 * dpr);
     const rightLimit = width - Math.round(64 * dpr);
     const cells = new Map();
+    let lightCluster = 0;
     let darkCluster = 0;
     let pin = 0;
 
@@ -344,17 +345,29 @@ async function sampleAtlas(page) {
         const r = pixels[i];
         const g = pixels[i + 1];
         const b = pixels[i + 2];
-        const dark = near(r, g, b, 61, 92, 76, 40) || near(r, g, b, 74, 85, 56, 40);
-        const hi = near(r, g, b, 127, 156, 138, 36) || near(r, g, b, 163, 176, 124, 36);
+        // Day clusters are #1f7a4d and #16603c. Tolerances stay under the gap
+        // to shore #1f6b45 (23 and 29) so the coastline is not a cluster.
+        const dayCluster =
+          near(r, g, b, 31, 122, 77, 18) || near(r, g, b, 22, 96, 60, 18);
+        // Ink #3d5c4c and earth #4a5538. The dark shore highlight is not a cluster.
+        const nightCluster =
+          near(r, g, b, 61, 92, 76, 40) || near(r, g, b, 74, 85, 56, 40);
+        // Day pins are #d4532c. Cream matches day land #f7f1e4 and ink pins,
+        // so cream is kept separate and only used as a pin on the dark map.
+        const dayPin = near(r, g, b, 212, 83, 44, 36);
         const cream = r > 220 && g > 205 && b > 185 && Math.abs(r - g) < 25;
         let kind = null;
-        if (dark) {
+        if (dayCluster) {
+          kind = "cluster";
+          lightCluster += 1;
+        } else if (nightCluster) {
           kind = "cluster";
           darkCluster += 1;
-        } else if (hi) kind = "clusterHi";
-        else if (cream) {
+        } else if (dayPin) {
           kind = "pin";
           pin += 1;
+        } else if (cream) {
+          kind = "cream";
         }
         if (!kind) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(y / cell)},${kind}`;
@@ -366,14 +379,16 @@ async function sampleAtlas(page) {
       }
     }
 
+    const creamIsPin = lightCluster < 80;
     const targets = [...cells.values()]
       .filter((bucket) => {
         if (bucket.kind === "cluster") return bucket.n >= 8;
-        if (bucket.kind === "clusterHi") return bucket.n >= 28;
+        if (bucket.kind === "cream") return creamIsPin && bucket.n >= 18;
         return bucket.n >= 18;
       })
+      .map((bucket) => (bucket.kind === "cream" ? { ...bucket, kind: "pin" } : bucket))
       .sort((a, b) => {
-        const rank = { cluster: 0, pin: 1, clusterHi: 2 };
+        const rank = { cluster: 0, pin: 1 };
         return rank[a.kind] - rank[b.kind] || b.n - a.n;
       })
       .slice(0, 12)
@@ -385,6 +400,7 @@ async function sampleAtlas(page) {
       }));
 
     return {
+      lightCluster,
       darkCluster,
       pin,
       dpr,
@@ -395,15 +411,22 @@ async function sampleAtlas(page) {
   });
 }
 
-async function waitForClusters(page) {
+async function waitForAtlasPaint(page, mode) {
   let last = null;
   for (let i = 0; i < 40; i++) {
     last = await sampleAtlas(page);
-    if (last && !last.error && last.darkCluster >= 80) return last;
+    const light = last?.lightCluster ?? 0;
+    const dark = last?.darkCluster ?? 0;
+    if (last && !last.error) {
+      if (mode === "light" && light >= 80) return last;
+      // A light map can still match a few ink-cluster pixels. Dark mode has
+      // to clear that floor and drop the day greens.
+      if (mode === "dark" && dark >= 400 && light < 80) return last;
+    }
     await page.waitForTimeout(250);
   }
   throw new Error(
-    `marker pins or clusters did not render (darkCluster=${last?.darkCluster ?? 0}, pin=${last?.pin ?? 0}${last?.error ? `, ${last.error}` : ""})`,
+    `marker pins or clusters did not render in ${mode} mode (lightCluster=${last?.lightCluster ?? 0}, darkCluster=${last?.darkCluster ?? 0}, pin=${last?.pin ?? 0}${last?.error ? `, ${last.error}` : ""})`,
   );
 }
 
@@ -504,12 +527,33 @@ async function driveAtlas(page, shot, step) {
 
   let sampled = null;
   const rendered = await check(step, "atlas: pins or clusters render", async () => {
-    sampled = await waitForClusters(page);
+    sampled = await waitForAtlasPaint(page, "light");
     await shot("01-atlas-loaded.png");
-    return `${sampled.darkCluster} cluster pixels, ${sampled.targets.length} tap targets`;
+    return `${sampled.lightCluster} light cluster pixels, ${sampled.targets.length} tap targets`;
   });
   if (!rendered) {
     await shot("fail-atlas-pins.png").catch(() => {});
+    return;
+  }
+
+  const darkened = await check(step, "atlas: switch to dark mode", async () => {
+    await page.getByRole("button", { name: "Switch to dark mode" }).click();
+    const dark = await waitForAtlasPaint(page, "dark");
+    await shot("01-atlas-dark.png");
+    return `${dark.darkCluster} dark cluster pixels`;
+  });
+  if (!darkened) {
+    await shot("fail-atlas-dark.png").catch(() => {});
+    return;
+  }
+
+  const restored = await check(step, "atlas: switch to light mode", async () => {
+    await page.getByRole("button", { name: "Switch to light mode" }).click();
+    sampled = await waitForAtlasPaint(page, "light");
+    return `${sampled.lightCluster} light cluster pixels`;
+  });
+  if (!restored) {
+    await shot("fail-atlas-light.png").catch(() => {});
     return;
   }
 
@@ -669,13 +713,28 @@ async function driveScan(page, shot, step) {
 }
 
 async function driveLesson(page, shot, step) {
-  await check(step, "lesson: Fort Mill", async () => {
+  const opened = await check(step, "lesson: Fort Mill", async () => {
     await page.goto("/markers/46-21", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.getByRole("heading", { name: "Fort Mill" }).waitFor({ timeout: 15000 });
     await page.getByText(/46-21/).first().waitFor();
+    await page.getByRole("heading", { name: "Official inscription" }).waitFor();
     await page.getByRole("button", { name: "Play lesson" }).waitFor();
     await shot("08-lesson-fort-mill.png");
     return "Fort Mill (46-21) shows Play lesson";
+  });
+  if (!opened) return;
+
+  await check(step, "lesson: hands-on inscription", async () => {
+    const title = page.getByRole("heading", { name: "How Fort Mill got its name" });
+    await title.scrollIntoViewIfNeeded();
+    await page.getByText(/hands-on lesson/i).first().waitFor();
+    await page.getByText(/Every fact is from the inscription\./).waitFor();
+    const next = page.getByRole("button", { name: "Next" });
+    await next.scrollIntoViewIfNeeded();
+    await next.click();
+    await page.getByText(/Part 2 of/).waitFor({ timeout: 8000 });
+    await shot("08-lesson-fort-mill-hands-on.png");
+    return "How Fort Mill got its name advanced to part 2";
   });
 }
 
