@@ -20,7 +20,7 @@ Preconditions:
 
 - Doctor reports the origin healthy.
 
-- **Open Fort Mill.** Run `node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature lesson --url http://127.0.0.1:8091`. The heading is `Fort Mill`, the page shows `46-21`, heading `Official inscription` is visible, and button `Play lesson` is visible. Evidence is `08-lesson-fort-mill.png`.
+- **Open Fort Mill.** Run `node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature lesson --url http://127.0.0.1:8091`. The level-1 heading is exactly `Fort Mill` (the hands-on title `How Fort Mill got its name` does not count), the page shows `46-21`, heading `Official inscription` is visible, and button `Play lesson` is visible. Evidence is `08-lesson-fort-mill.png`.
 - **Hands-on lesson.** The same command scrolls to heading `How Fort Mill got its name` under the text `Hands-on lesson`. The intro says `Every fact is from the inscription.` Choose `Next`. The step `lesson: hands-on inscription` passes when the page shows `Part 2 of`. Evidence is `08-lesson-fort-mill-hands-on.png`.
 
 ## Gotchas

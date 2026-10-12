@@ -715,7 +715,7 @@ async function driveScan(page, shot, step) {
 async function driveLesson(page, shot, step) {
   const opened = await check(step, "lesson: Fort Mill", async () => {
     await page.goto("/markers/46-21", { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.getByRole("heading", { name: "Fort Mill" }).waitFor({ timeout: 15000 });
+    await page.getByRole("heading", { level: 1, name: "Fort Mill", exact: true }).waitFor({ timeout: 15000 });
     await page.getByText(/46-21/).first().waitFor();
     await page.getByRole("heading", { name: "Official inscription" }).waitFor();
     await page.getByRole("button", { name: "Play lesson" }).waitFor();
