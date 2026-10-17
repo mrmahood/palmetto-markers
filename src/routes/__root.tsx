@@ -21,7 +21,7 @@ export const Route = createRootRoute({
         content:
           "A field guide to every official South Carolina historical marker — map, spoken lessons, and plaque scan.",
       },
-      { name: "theme-color", content: "#f4efe4" },
+      { name: "theme-color", content: "#ffffff" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
     ],
     links: [

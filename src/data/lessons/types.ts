@@ -1,4 +1,5 @@
-/** A hands-on marker lesson. Facts live in the record, not in the player. */
+/** A hands-on marker lesson. Facts live in the record, not in the player.
+ * Pictures use the locked dollar-bill plate in ./plate.ts. */
 
 export type LessonArt = {
   src: string;
