@@ -5,14 +5,16 @@ export function Onboarding() {
   const setSeenOnboard = useAppStore((s) => s.setSeenOnboard);
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <img
-        src="/images/hero-marker.jpg"
-        alt=""
-        className="absolute inset-0 h-full w-full object-cover opacity-50"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/30" />
+      <div className="relative min-h-0 flex-[1.35]">
+        <img
+          src="/images/hero-marker.jpg?v=2"
+          alt="A South Carolina historical marker, palmetto and crescent"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background to-transparent" />
+      </div>
       <div
-        className="relative mt-auto flex flex-col gap-5 px-6 pb-10"
+        className="relative flex flex-col gap-5 px-6 pt-1 pb-10"
         style={{ paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))" }}
       >
         <p className="text-xs font-medium uppercase tracking-[0.22em] text-accent">

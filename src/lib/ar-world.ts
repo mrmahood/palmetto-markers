@@ -9,8 +9,6 @@ export type ArHandle = {
   dispose: () => void;
 };
 
-const SAGE = 0x7f9c8a;
-const PINE = 0x1a2620;
 const PARCHMENT = 0xece7dc;
 const TRUNK = 0x5c4634;
 const FROND = 0x3d6b52;
@@ -88,7 +86,7 @@ function plaque(): THREE.Group {
   g.add(emblem);
   const crescent = new THREE.Mesh(
     new THREE.TorusGeometry(0.09, 0.018, 8, 18, Math.PI * 1.2),
-    new THREE.MeshStandardMaterial({ color: SAGE, metalness: 0.5, roughness: 0.35 }),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.5, roughness: 0.35 }),
   );
   crescent.position.set(0, 1.64, 0.05);
   g.add(crescent);
@@ -162,7 +160,7 @@ function church(): THREE.Group {
   g.add(steeple);
   const spire = new THREE.Mesh(
     new THREE.ConeGeometry(0.2, 0.62, 8),
-    new THREE.MeshStandardMaterial({ color: SAGE, roughness: 0.45 }),
+    new THREE.MeshStandardMaterial({ color: 0x041e42, roughness: 0.45 }),
   );
   spire.position.set(0, 2.18, 0.58);
   g.add(spire);
@@ -236,7 +234,7 @@ function capitol(): THREE.Group {
   }
   const dome = new THREE.Mesh(
     new THREE.SphereGeometry(0.42, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: SAGE, metalness: 0.35, roughness: 0.4 }),
+    new THREE.MeshStandardMaterial({ color: 0xdfe6ee, metalness: 0.2, roughness: 0.45 }),
   );
   dome.position.y = 1.52;
   g.add(dome);
@@ -316,7 +314,7 @@ function dust(): THREE.Points {
 function ground(): THREE.Mesh {
   return new THREE.Mesh(
     new THREE.CircleGeometry(3.6, 40),
-    new THREE.MeshStandardMaterial({ color: PINE, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x021428, roughness: 1 }),
   );
 }
 
@@ -404,16 +402,16 @@ export function createArWorld(
   renderer.toneMappingExposure = 1.15;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0c110f, 0.045);
+  scene.fog = new THREE.FogExp2(0x041e42, 0.045);
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 80);
   camera.position.set(0, 1.5, 4.4);
   camera.lookAt(0, 0.95, 0);
 
-  scene.add(new THREE.HemisphereLight(0xf3ead8, 0x142018, 1.05));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x041e42, 1.05));
   const key = new THREE.DirectionalLight(0xffe2b8, 1.55);
   key.position.set(3.4, 6.8, 2.6);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(SAGE, 0.55);
+  const rim = new THREE.DirectionalLight(0xd6e4f5, 0.55);
   rim.position.set(-3.2, 2.2, -2.4);
   scene.add(rim);
   const fill = new THREE.PointLight(0xece7dc, 0.45, 8);

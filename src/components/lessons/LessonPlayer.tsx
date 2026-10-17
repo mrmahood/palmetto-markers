@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { LESSON_PLATE } from "@/data/lessons/plate";
 import type {
   LessonArt,
   LessonComparePanel,
@@ -298,7 +299,12 @@ function Panel({
 
 function SceneArt({ art }: { art: LessonArt }) {
   return (
-    <img src={art.src} alt={art.label} className="aspect-3/2 h-auto w-full rounded-md object-cover" />
+    <img
+      src={art.src}
+      alt={art.label}
+      data-plate={LESSON_PLATE.id}
+      className="aspect-3/2 h-auto w-full rounded-md object-cover"
+    />
   );
 }
 

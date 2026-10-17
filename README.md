@@ -35,6 +35,7 @@ Open [http://localhost:8080](http://localhost:8080).
 
 - Marker text and coordinates: SC Historical Marker Program / SCDAH
 - Photographs: Library of Congress (Prints & Photographs, HABS, FSA, Highsmith, National Photo Company, Lewis Hine). Each lesson credits the plate. If we do not have the subject itself, the credit says so.
+- Lesson illustrations stay on one plate: olive-green ink and warm beige paper, the dollar-bill look. Do not recolor them to the flag navy or to full color.
 - Do not drop in AI-generated “historical” scenes. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License

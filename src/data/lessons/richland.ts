@@ -1,5 +1,5 @@
+import { lessonArt as art } from "./plate";
 import type {
-  LessonArt,
   LessonEvent,
   LessonPanel,
   LessonSource,
@@ -11,10 +11,6 @@ import type {
 
 const INTRO =
   "Move through the years on this marker. Tap the picture. Every fact is from the inscription.";
-
-function art(file: string, label: string): LessonArt {
-  return { src: `/images/lessons/${file}`, label };
-}
 
 function cited(id: string, name: string, sides: "front" | "front and back"): LessonSource {
   return {
