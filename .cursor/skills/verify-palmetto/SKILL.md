@@ -53,7 +53,7 @@ Without `--url`, doctor reads `verify-output/palmetto/server.json` and requires 
 
 ## Drive
 
-The harness is Playwright against system Chrome (`channel: "chrome"`), viewport 390×844, `deviceScaleFactor` 1. It grants camera permission and launches Chrome with `--use-fake-device-for-media-stream` and `--use-fake-ui-for-media-stream`. It wraps `getUserMedia` and counts calls. If that device does not settle within 1.5s, the wrapper resolves a canvas `captureStream` instead, so the Open camera click can finish without hardware. Either stream is only for that click path. Plaque type-in uses the real marker index. The call count on load is still 0: the wrapper does not invoke the camera by itself.
+The harness is Playwright against system Chrome (`channel: "chrome"`), viewport 390×844, `deviceScaleFactor` 1. It grants camera permission and launches Chrome with `--use-fake-device-for-media-stream` and `--use-fake-ui-for-media-stream`. It wraps `getUserMedia` and counts calls. If that device does not settle within 1.5s, the wrapper resolves a canvas `captureStream` instead, so the Open camera click can finish without hardware. Either stream is only for that click path. Plaque type-in uses the real marker index. The wrapper does not invoke the camera by itself. Read the call count only after `/ar` has been idle for 3 seconds with no clicks and no typing. A sample taken as soon as `Open camera` appears still reads 0 when a mount timer (the retired bundle used 250ms) has not fired yet. After one `Open camera` click the count is exactly 1. The page must not show `iPhone: tap Open camera, then allow access.`
 
 Prefer these handles. The atlas pins are canvas pixels, not DOM nodes.
 
@@ -63,6 +63,7 @@ Prefer these handles. The atlas pins are canvas pixels, not DOM nodes.
 | Atlas surface | `role=application` named `South Carolina historical marker atlas` |
 | Marker count | text matching `official South Carolina markers` |
 | Marker details sheet | `article` that contains button `Lesson`, an `h2` name, and a line like `46-21 · Early Republic` |
+| Map theme | button `Switch to dark mode`, then button `Switch to light mode` |
 | Dense tap result | text matching `markers here`, then the first button in that `z-30` sheet |
 | Scan page | heading `Scan the plaque` at `/ar` |
 | Camera | button `Open camera`, then button `Scan plaque`, status `Hold the plaque in the frame` |
@@ -88,14 +89,15 @@ node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature tours --u
 
 Atlas proof, in order:
 
-1. Open `/`. If the cover is up, choose `Open the atlas`. The canvas and the official-marker count are visible.
-2. Sample the canvas. Cluster fills (`#3d5c4c` / earth `#4a5538`) must be present. Shore color alone does not count. Screenshot `01-atlas-loaded.png`.
-3. Click a rendered cluster or pin (only when `elementFromPoint` is the canvas). A cluster zooms; at a close zoom it opens the `markers here` sheet. A single pin, or a row in that sheet, opens the details article. Screenshot `02-atlas-marker-details.png`. The article shows a marker name and an id of the form `NN-NN` or `NN-NNN`.
+1. Open `/`. If the cover is up, choose `Open the atlas`. The canvas and the official-marker count are visible. The map starts in light mode.
+2. Sample the canvas. Cluster fills come from the current map style, not from colors stored in this skill. The harness reads the non-satellite light palette (and the dark palette in the next step) from `src/components/map-canvas.tsx`, and reads light and dark theme tokens from `src/styles.css` when a paint is `var(--color-…)` or the map style names no pin or cluster fill. Land and ocean fills are not pins. A shore, river, or label that shares a fill counts only where the pixels form a disk. Screenshot `01-atlas-loaded.png`.
+3. Choose `Switch to dark mode`. Dark cluster fills from that same map style must be present. The shore stroke is not a cluster. Screenshot `01-atlas-dark.png`. Choose `Switch to light mode` and require the light cluster fills again.
+4. Click a rendered cluster or pin (only when `elementFromPoint` is the canvas). A cluster zooms; at a close zoom it opens the `markers here` sheet. A single pin, or a row in that sheet, opens the details article. Screenshot `02-atlas-marker-details.png`. The article shows a marker name and an id of the form `NN-NN` or `NN-NNN`.
 
 Scan proof, in order:
 
-1. Open `/ar`. Heading `Scan the plaque` and button `Open camera` are visible. `getUserMedia` has been called 0 times. The live `<video>` opacity is `0`. Screenshot `03-scan-camera-closed.png`.
-2. Choose `Open camera`. The fake camera starts: `getUserMedia` count is at least 1, video opacity is `1`, status is `Hold the plaque in the frame`, and button `Scan plaque` exists. Screenshot `04-scan-camera-open.png`.
+1. Open `/ar`. Wait 3 seconds with no clicks and no typing. Heading `Scan the plaque` and button `Open camera` are still visible. `getUserMedia` has been called 0 times. The live `<video>` opacity is `0`. The sentence `iPhone: tap Open camera, then allow access.` is absent. Screenshot `03-scan-camera-closed.png`.
+2. Choose `Open camera`. The fake camera starts: `getUserMedia` count is exactly 1, video opacity is `1`, status is `Hold the plaque in the frame`, and button `Scan plaque` exists. Screenshot `04-scan-camera-open.png`.
 3. Type `46-21` into the plaque field, choose the `Fort Mill` row, and require the locked card id to be `46-21` and the heading `Fort Mill`. Screenshot `05-scan-fort-mill.png`.
 4. Choose `Scan another marker`. Type `7-15`. The row and the locked card show `Penn School` and id `07-15`. Screenshot `06-scan-penn-7-15.png`.
 5. Scan another. Type `07-15`. Same marker, same id `07-15`. Screenshot `07-scan-penn-07-15.png`.
@@ -108,8 +110,8 @@ The feature map lists lesson, explore, and tours as well. Drive those with the `
 
 Every `run` and `drive` writes to `verify-output/palmetto/` (override with `--out`). The directory is gitignored. Cleanup does not delete it.
 
-- `01-atlas-loaded.png` through `07-scan-penn-07-15.png` for the required flows
-- `08-lesson-fort-mill.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
+- `01-atlas-loaded.png`, `01-atlas-dark.png`, and `02-atlas-marker-details.png` through `07-scan-penn-07-15.png` for the required flows
+- `08-lesson-fort-mill.png`, `08-lesson-fort-mill-hands-on.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
 - `fail-<step>.png` when a step fails
 - `session.webm` unless `--no-video`
 - `summary.json` and a PASS/FAIL list on stdout
@@ -127,7 +129,7 @@ PASS  atlas: page loads — Palmetto Markers
 evidence /path/to/verify-output/palmetto
 ```
 
-Proof is the user path: a click or a typed plaque number, then the resulting screen. Do not set Zustand state, do not call `matchPlaque` from the harness, and do not treat a unit test as a substitute for the screenshot. `npm test` is an additional step, reported beside the browser steps. The fake camera is the production `getUserMedia` boundary with a synthetic device. Confirm the camera stayed closed by the call count and the video opacity, not by the button label alone.
+Proof is the user path: a click or a typed plaque number, then the resulting screen. Do not set Zustand state, do not call `matchPlaque` from the harness, and do not treat a unit test as a substitute for the screenshot. `npm test` is an additional step, reported beside the browser steps. The fake camera is the production `getUserMedia` boundary with a synthetic device. Confirm the camera stayed closed by an idle wait, then a `getUserMedia` count of 0 and a video opacity of `0`, not by the button label alone. One click that leaves the count at 2 means the camera was already requested.
 
 ## Cleanup
 
