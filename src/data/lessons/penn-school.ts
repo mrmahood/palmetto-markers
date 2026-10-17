@@ -1,3 +1,4 @@
+import { lessonArt } from "./plate";
 import type { MarkerLesson } from "./types";
 
 /** Facts for marker 07-15 only. Every sentence is taken from that marker’s
@@ -5,25 +6,25 @@ import type { MarkerLesson } from "./types";
  * Program record shipped with this app. The 86-year figure is the difference
  * between the two years the inscription prints: 1948 − 1862. */
 
-const arrival = {
-  src: "/images/lessons/penn-arrival.jpg",
-  label: "Illustration of a boat and two people arriving on a marshy island.",
-};
+const arrival = lessonArt(
+  "penn-arrival.jpg",
+  "Illustration of a boat and two people arriving on a marshy island.",
+);
 
-const school = {
-  src: "/images/lessons/penn-school-print.jpg",
-  label: "Illustration of a small schoolhouse and a teacher.",
-};
+const school = lessonArt(
+  "penn-school-print.jpg",
+  "Illustration of a small schoolhouse and a teacher.",
+);
 
-const fields = {
-  src: "/images/lessons/penn-fields.jpg",
-  label: "Illustration of crop rows beside a workshop and school.",
-};
+const fields = lessonArt(
+  "penn-fields.jpg",
+  "Illustration of crop rows beside a workshop and school.",
+);
 
-const today = {
-  src: "/images/lessons/penn-today.jpg",
-  label: "Illustration of a historical marker in front of a low building.",
-};
+const today = lessonArt(
+  "penn-today.jpg",
+  "Illustration of a historical marker in front of a low building.",
+);
 
 export const pennLesson: MarkerLesson = {
   markerId: "07-15",

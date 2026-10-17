@@ -9,7 +9,7 @@ export function ThemeSync() {
     document.documentElement.dataset.theme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute("content", theme === "dark" ? "#121916" : "#f4efe4");
+      meta.setAttribute("content", theme === "dark" ? "#041e42" : "#ffffff");
     }
   }, [theme]);
   return null;
