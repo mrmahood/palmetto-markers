@@ -90,8 +90,8 @@ node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature tours --u
 Atlas proof, in order:
 
 1. Open `/`. If the cover is up, choose `Open the atlas`. The canvas and the official-marker count are visible. The map starts in light mode.
-2. Sample the canvas. Light cluster fills `#1f7a4d` and `#16603c` must be present. Cream land `#f7f1e4` is not a pin. Shore `#1f6b45` does not count. Screenshot `01-atlas-loaded.png`.
-3. Choose `Switch to dark mode`. Dark cluster fill `#3d5c4c` must be present (earth `#4a5538` when satellite is also on). The shore highlight is not a cluster. Screenshot `01-atlas-dark.png`. Choose `Switch to light mode` and require the light cluster fills again.
+2. Sample the canvas. Cluster fills come from the current map style, not from colors stored in this skill. The harness reads the non-satellite light palette (and the dark palette in the next step) from `src/components/map-canvas.tsx`, and reads light and dark theme tokens from `src/styles.css` when a paint is `var(--color-…)` or the map style names no pin or cluster fill. Land and ocean fills are not pins. A shore, river, or label that shares a fill counts only where the pixels form a disk. Screenshot `01-atlas-loaded.png`.
+3. Choose `Switch to dark mode`. Dark cluster fills from that same map style must be present. The shore stroke is not a cluster. Screenshot `01-atlas-dark.png`. Choose `Switch to light mode` and require the light cluster fills again.
 4. Click a rendered cluster or pin (only when `elementFromPoint` is the canvas). A cluster zooms; at a close zoom it opens the `markers here` sheet. A single pin, or a row in that sheet, opens the details article. Screenshot `02-atlas-marker-details.png`. The article shows a marker name and an id of the form `NN-NN` or `NN-NNN`.
 
 Scan proof, in order:

@@ -23,15 +23,15 @@ Preconditions:
 - The browser context has not pre-seeded a selected marker.
 
 - **Load.** Open `/` and dismiss the cover when it is present. Run `node .cursor/skills/verify-palmetto/scripts/verify.mjs drive --feature atlas --url http://127.0.0.1:8091`. The step `atlas: page loads` passes when the canvas named `South Carolina historical marker atlas` and the text `official South Carolina markers` are visible. A fresh browser starts in light mode.
-- **Pins or clusters.** The same command waits until light cluster-fill pixels (`#1f7a4d`, `#16603c`) are on the canvas and writes `verify-output/palmetto/01-atlas-loaded.png`. The screenshot shows the state outline and marker clusters. Cream land is not a pin.
-- **Theme.** Choose `Switch to dark mode`. The step `atlas: switch to dark mode` passes when dark cluster fill `#3d5c4c` is on the canvas. Evidence is `01-atlas-dark.png`. Choose `Switch to light mode`. The step `atlas: switch to light mode` passes when the light cluster fills return. The tap below runs on that restored light map.
+- **Pins or clusters.** The same command reads the light map palette from the app source and waits until those cluster-fill pixels are on the canvas. It writes `verify-output/palmetto/01-atlas-loaded.png`. The screenshot shows the state outline and marker clusters. Land is not a pin.
+- **Theme.** Choose `Switch to dark mode`. The step `atlas: switch to dark mode` passes when cluster fills from the dark map palette are on the canvas. Evidence is `01-atlas-dark.png`. Choose `Switch to light mode`. The step `atlas: switch to light mode` passes when the light cluster fills return. The tap below runs on that restored light map.
 - **Tap.** The harness clicks a cluster or a single pin. A cluster may zoom or open a sheet whose text matches `markers here`. Choosing a row in that sheet, or tapping a single pin, opens an article with button `Lesson`. The step `atlas: tap opens marker details` passes when that article shows a name and an id. Evidence is `02-atlas-marker-details.png`.
 
 ## Gotchas
 
 - Pins are drawn on a canvas. There is no DOM node per marker. A pass that only checks `canvas` exists is not `atlas-pins`.
-- The default palette is light. Land is `#f7f1e4` and single pins are `#d4532c`. Treating cream pixels as pins clicks empty land.
-- In light mode the shore is `#1f6b45`, close to cluster `#1f7a4d`. The harness uses a tight tolerance so the shoreline does not count. In dark mode the shore highlight matches the largest cluster highlight; the harness counts the darker fill `#3d5c4c`, not the shore.
+- The harness reads pin and cluster fills from the map style in `src/components/map-canvas.tsx`. `palOf` selects the light and dark palettes (satellite stays off in this proof). `src/styles.css` supplies the `@theme` tokens and the `data-theme="dark"` tokens when a paint uses `var(--color-…)` and when the map style names no fill. Both themes are read when both exist.
+- Land and ocean are area fills. They are not tap targets. The shore, rivers, and place labels often use the same hex as a pin or a small cluster. Those pixels count only when the neighborhood is a filled disk, which is how a pin and a cluster are drawn. A thin stroke does not. Clicking land or the shoreline does not open marker details.
 - The Catawba and the other rivers are canvas strokes and labels. They are not a control and not a tap target.
 - The theme control is the button `Switch to dark mode` or `Switch to light mode`, in the top-right stack with `My location` and `Toggle satellite`. Satellite is a separate control. This proof does not turn it on.
 - A double-tap zooms instead of selecting. Clicks in one proof are at least a second apart.

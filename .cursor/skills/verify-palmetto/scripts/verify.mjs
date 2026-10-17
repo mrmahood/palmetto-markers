@@ -313,124 +313,488 @@ function runNpmTest(outDir) {
   });
 }
 
-async function sampleAtlas(page) {
-  return page.evaluate(() => {
-    const canvas = document.querySelector(
-      'canvas[aria-label="South Carolina historical marker atlas"]',
-    );
-    if (!canvas) return null;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const width = canvas.width;
-    const height = canvas.height;
-    let pixels;
-    try {
-      pixels = ctx.getImageData(0, 0, width, height).data;
-    } catch (err) {
-      return { error: String(err) };
-    }
-    const dpr = width / canvas.clientWidth || 1;
-    const cell = Math.max(8, Math.round(14 * dpr));
-    const top = Math.round(130 * dpr);
-    const bottom = height - Math.round(130 * dpr);
-    const rightLimit = width - Math.round(64 * dpr);
-    const cells = new Map();
-    let lightCluster = 0;
-    let darkCluster = 0;
-    let pin = 0;
+const AREA_KEYS = new Set(["ocean0", "ocean1", "neighbor", "land", "york", "washes"]);
+const STROKE_KEYS = new Set([
+  "shore",
+  "river",
+  "riverMajor",
+  "text",
+  "muted",
+  "landmark",
+  "pinStroke",
+  "county",
+  "chip",
+  "chipText",
+]);
+const MARKER_KEYS = ["cluster", "clusterHi", "pin"];
 
-    function near(r, g, b, R, G, B, tol) {
-      return Math.abs(r - R) + Math.abs(g - G) + Math.abs(b - B) < tol;
-    }
+let cachedAtlasPaints = null;
 
-    for (let y = top; y < bottom; y += 2) {
-      for (let x = 0; x < rightLimit; x += 2) {
-        const i = (y * width + x) * 4;
-        const r = pixels[i];
-        const g = pixels[i + 1];
-        const b = pixels[i + 2];
-        // Day clusters are #1f7a4d and #16603c. Tolerances stay under the gap
-        // to shore #1f6b45 (23 and 29) so the coastline is not a cluster.
-        const dayCluster =
-          near(r, g, b, 31, 122, 77, 18) || near(r, g, b, 22, 96, 60, 18);
-        // Ink #3d5c4c and earth #4a5538. The dark shore highlight is not a cluster.
-        const nightCluster =
-          near(r, g, b, 61, 92, 76, 40) || near(r, g, b, 74, 85, 56, 40);
-        // Day pins are #d4532c. Cream matches day land #f7f1e4 and ink pins,
-        // so cream is kept separate and only used as a pin on the dark map.
-        const dayPin = near(r, g, b, 212, 83, 44, 36);
-        const cream = r > 220 && g > 205 && b > 185 && Math.abs(r - g) < 25;
-        let kind = null;
-        if (dayCluster) {
-          kind = "cluster";
-          lightCluster += 1;
-        } else if (nightCluster) {
-          kind = "cluster";
-          darkCluster += 1;
-        } else if (dayPin) {
-          kind = "pin";
-          pin += 1;
-        } else if (cream) {
-          kind = "cream";
-        }
-        if (!kind) continue;
-        const key = `${Math.floor(x / cell)},${Math.floor(y / cell)},${kind}`;
-        const bucket = cells.get(key) ?? { kind, n: 0, x: 0, y: 0 };
-        bucket.n += 1;
-        bucket.x += x;
-        bucket.y += y;
-        cells.set(key, bucket);
+function rgbDist(a, b) {
+  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+}
+
+function closestDistance(rgb, others) {
+  let min = Infinity;
+  for (const other of others) {
+    const d = rgbDist(other, rgb);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+function rgbHex([r, g, b]) {
+  return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function parseHex(hex) {
+  const h = hex.replace("#", "");
+  if (h.length === 3 || h.length === 4) {
+    return [
+      parseInt(h[0] + h[0], 16),
+      parseInt(h[1] + h[1], 16),
+      parseInt(h[2] + h[2], 16),
+    ];
+  }
+  if (h.length === 6 || h.length === 8) {
+    return [
+      parseInt(h.slice(0, 2), 16),
+      parseInt(h.slice(2, 4), 16),
+      parseInt(h.slice(4, 6), 16),
+    ];
+  }
+  return null;
+}
+
+function parseColorLiteral(raw) {
+  const text = String(raw).trim();
+  const hex = text.match(/#[0-9a-fA-F]{3,8}/);
+  if (hex && !text.includes("var(")) return parseHex(hex[0]);
+  return hex ? parseHex(hex[0]) : null;
+}
+
+function extractBalanced(source, openIndex, openCh, closeCh) {
+  let depth = 0;
+  for (let i = openIndex; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === '"' || ch === "'" || ch === "`") {
+      i += 1;
+      while (i < source.length && source[i] !== ch) {
+        if (source[i] === "\\") i += 1;
+        i += 1;
       }
+      continue;
     }
+    if (ch === openCh) depth += 1;
+    else if (ch === closeCh) {
+      depth -= 1;
+      if (depth === 0) return source.slice(openIndex, i + 1);
+    }
+  }
+  return null;
+}
 
-    const creamIsPin = lightCluster < 80;
-    const targets = [...cells.values()]
-      .filter((bucket) => {
-        if (bucket.kind === "cluster") return bucket.n >= 8;
-        if (bucket.kind === "cream") return creamIsPin && bucket.n >= 18;
-        return bucket.n >= 18;
-      })
-      .map((bucket) => (bucket.kind === "cream" ? { ...bucket, kind: "pin" } : bucket))
-      .sort((a, b) => {
-        const rank = { cluster: 0, pin: 1 };
-        return rank[a.kind] - rank[b.kind] || b.n - a.n;
-      })
-      .slice(0, 12)
-      .map((bucket) => ({
-        kind: bucket.kind,
-        n: bucket.n,
-        x: bucket.x / bucket.n / dpr,
-        y: bucket.y / bucket.n / dpr,
-      }));
+function parseObjectFields(body) {
+  const inner = body.slice(1, -1);
+  const fields = {};
+  let i = 0;
+  while (i < inner.length) {
+    while (i < inner.length && /[\s,]/.test(inner[i])) i += 1;
+    if (i >= inner.length) break;
+    if (inner[i] === "/" && inner[i + 1] === "/") {
+      i = inner.indexOf("\n", i);
+      if (i < 0) break;
+      continue;
+    }
+    const keyMatch = /^([A-Za-z_][\w]*)\s*:/.exec(inner.slice(i));
+    if (!keyMatch) break;
+    const key = keyMatch[1];
+    i += keyMatch[0].length;
+    while (i < inner.length && /\s/.test(inner[i])) i += 1;
+    if (inner[i] === "{") {
+      const obj = extractBalanced(inner, i, "{", "}");
+      if (!obj) break;
+      fields[key] = obj;
+      i += obj.length;
+    } else if (inner[i] === "[") {
+      const arr = extractBalanced(inner, i, "[", "]");
+      if (!arr) break;
+      fields[key] = arr;
+      i += arr.length;
+    } else if (inner[i] === '"' || inner[i] === "'") {
+      const q = inner[i];
+      let j = i + 1;
+      while (j < inner.length && inner[j] !== q) {
+        if (inner[j] === "\\") j += 1;
+        j += 1;
+      }
+      fields[key] = inner.slice(i + 1, j);
+      i = j + 1;
+    } else {
+      const m = /^[^,\n}]+/.exec(inner.slice(i));
+      fields[key] = m ? m[0].trim() : "";
+      i += m ? m[0].length : 1;
+    }
+  }
+  return fields;
+}
 
-    return {
-      lightCluster,
-      darkCluster,
-      pin,
-      dpr,
-      width: canvas.clientWidth,
-      height: canvas.clientHeight,
-      targets,
-    };
-  });
+function parseThemeTokens(css) {
+  function colorsIn(body) {
+    const colors = {};
+    const re = /--([\w-]+)\s*:\s*([^;]+);/g;
+    let m;
+    while ((m = re.exec(body))) {
+      const rgb = parseColorLiteral(m[2]);
+      if (rgb) colors[m[1]] = rgb;
+    }
+    return colors;
+  }
+  const light = {};
+  const dark = {};
+  const theme = css.match(/@theme\s*\{([\s\S]*?)\n\}/);
+  if (theme) Object.assign(light, colorsIn(theme[1]));
+  const darkRe = /\[data-theme=["']dark["']\]\s*\{([\s\S]*?)\n\}/g;
+  let dm;
+  while ((dm = darkRe.exec(css))) Object.assign(dark, colorsIn(dm[1]));
+  return { light, dark };
+}
+
+function resolvePaint(raw, tokens) {
+  const text = String(raw).trim();
+  const variable = text.match(/var\(\s*--([\w-]+)/);
+  if (variable) {
+    if (tokens[variable[1]]) return tokens[variable[1]];
+    const fallback = text.match(/,\s*(#[0-9a-fA-F]{3,8})/);
+    if (fallback) return parseHex(fallback[1]);
+    return null;
+  }
+  return parseColorLiteral(text);
+}
+
+function colorsFromField(raw, tokens) {
+  const text = String(raw);
+  const out = [];
+  if (text.startsWith("[")) {
+    const re = /#[0-9a-fA-F]{3,8}|var\([^)]+\)/g;
+    let m;
+    while ((m = re.exec(text))) {
+      const rgb = resolvePaint(m[0], tokens);
+      if (rgb) out.push(rgb);
+    }
+    return out;
+  }
+  const rgb = resolvePaint(text, tokens);
+  return rgb ? [rgb] : [];
+}
+
+function paletteBinding(source) {
+  const fn = source.match(/palOf\s*=\s*\(\)\s*=>\s*\{([\s\S]*?)\n\s*\}/);
+  const body = fn ? fn[1] : source;
+  const found = [
+    ...body.matchAll(
+      /return\s+mode\s*===\s*["']dark["']\s*\?\s*(?:PAL\.)?(\w+)\s*:\s*(?:PAL\.)?(\w+)/g,
+    ),
+  ];
+  const plain = found.length ? found[found.length - 1] : null;
+  if (!plain) {
+    throw new Error(
+      "map style has no light/dark palette choice; expected palOf to return a dark palette and a light palette",
+    );
+  }
+  return { dark: plain[1], light: plain[2] };
+}
+
+function markerPaints(paletteFields, tokens, tokenFallback) {
+  const byKey = {};
+  for (const [key, raw] of Object.entries(paletteFields)) {
+    const colors = colorsFromField(raw, tokens);
+    if (colors.length) byKey[key] = colors;
+  }
+  if (!MARKER_KEYS.some((key) => byKey[key]?.length) && tokenFallback) {
+    for (const name of ["color-accent", "color-foreground"]) {
+      if (tokens[name]) byKey.pin = [...(byKey.pin ?? []), tokens[name]];
+    }
+  }
+  const area = [];
+  const strokes = [];
+  for (const [key, colors] of Object.entries(byKey)) {
+    if (AREA_KEYS.has(key)) area.push(...colors);
+    else if (STROKE_KEYS.has(key)) strokes.push(...colors);
+  }
+  const markers = [];
+  for (const key of MARKER_KEYS) {
+    for (const rgb of byKey[key] ?? []) {
+      const areaDist = closestDistance(rgb, area);
+      // Identical to a land or ocean fill: the whole region would look like markers.
+      if (areaDist === 0) continue;
+      const strokeDist = closestDistance(rgb, strokes);
+      const ambiguous = strokeDist <= 48;
+      const nearest = Math.min(areaDist, strokeDist);
+      // A county wash can sit a few levels away from a cluster fill. Stay strictly
+      // inside that gap so the wash itself is not classified as a cluster.
+      const tol =
+        areaDist <= 48
+          ? areaDist
+          : Math.max(12, Math.min(42, Number.isFinite(nearest) ? Math.floor(nearest / 2) : 36));
+      markers.push({
+        rgb,
+        role: key === "pin" ? "pin" : "cluster",
+        name: key,
+        ambiguous,
+        tol,
+      });
+    }
+  }
+  const merged = [];
+  for (const marker of markers) {
+    const hit = merged.find((item) => rgbDist(item.rgb, marker.rgb) === 0);
+    if (hit) {
+      hit.roles.add(marker.role);
+      hit.names.push(marker.name);
+      hit.ambiguous = hit.ambiguous || marker.ambiguous;
+      hit.tol = Math.min(hit.tol, marker.tol);
+    } else {
+      merged.push({
+        rgb: marker.rgb,
+        roles: new Set([marker.role]),
+        names: [marker.name],
+        ambiguous: marker.ambiguous,
+        tol: marker.tol,
+      });
+    }
+  }
+  return merged.map((item) => ({
+    r: item.rgb[0],
+    g: item.rgb[1],
+    b: item.rgb[2],
+    hex: rgbHex(item.rgb),
+    kind: item.roles.has("cluster") && item.roles.has("pin") ? "both" : item.roles.has("pin") ? "pin" : "cluster",
+    ambiguous: item.ambiguous,
+    tol: item.tol,
+    label: item.names.join("+"),
+  }));
+}
+
+export function loadAtlasPaints(root) {
+  const mapPath = join(root, "src/components/map-canvas.tsx");
+  const cssPath = join(root, "src/styles.css");
+  if (!existsSync(mapPath)) {
+    throw new Error(`map style not found at ${mapPath}`);
+  }
+  const mapSrc = readFileSync(mapPath, "utf8");
+  const cssSrc = existsSync(cssPath) ? readFileSync(cssPath, "utf8") : "";
+  const tokens = parseThemeTokens(cssSrc);
+  const binding = paletteBinding(mapSrc);
+  const palIdx = mapSrc.search(/\bPAL\b[^=]*=/);
+  if (palIdx < 0) throw new Error("map style has no PAL palette object");
+  const eq = mapSrc.indexOf("=", palIdx);
+  const brace = mapSrc.indexOf("{", eq);
+  const literal = extractBalanced(mapSrc, brace, "{", "}");
+  if (!literal) throw new Error("map style PAL object did not parse");
+  const palettes = parseObjectFields(literal);
+  function modePaints(mode) {
+    const name = binding[mode];
+    const body = palettes[name];
+    if (!body || !body.startsWith("{")) {
+      throw new Error(`map style has no ${mode} palette PAL.${name}`);
+    }
+    const themeTokens = mode === "dark" ? tokens.dark : tokens.light;
+    const markers = markerPaints(parseObjectFields(body), themeTokens, true);
+    if (!markers.length) {
+      throw new Error(`map style palette PAL.${name} has no pin or cluster fill`);
+    }
+    return { name, markers };
+  }
+  const light = modePaints("light");
+  const dark = modePaints("dark");
+  return {
+    binding,
+    tokens: { light: Object.keys(tokens.light).length, dark: Object.keys(tokens.dark).length },
+    light,
+    dark,
+  };
+}
+
+function atlasPaints() {
+  if (!cachedAtlasPaints) cachedAtlasPaints = loadAtlasPaints(repoRoot);
+  return cachedAtlasPaints;
+}
+
+function describePaints(mode) {
+  const pack = atlasPaints();
+  const modePaints = pack[mode];
+  const fills = modePaints.markers
+    .map((marker) => `${marker.label} ${marker.hex} ${marker.ambiguous ? "disk" : "fill"}`)
+    .join(", ");
+  return `PAL.${modePaints.name} (${fills}; css tokens light ${pack.tokens.light}, dark ${pack.tokens.dark})`;
+}
+
+function atlasMoved(before, after) {
+  if (!before || !after) return false;
+  const a = (before.lightCluster ?? 0) + (before.darkCluster ?? 0) + (before.pin ?? 0);
+  const b = (after.lightCluster ?? 0) + (after.darkCluster ?? 0) + (after.pin ?? 0);
+  if (a === 0) return b > 0;
+  if (Math.abs(a - b) / a > 0.08) return true;
+  const t0 = before.targets?.[0];
+  const t1 = after.targets?.[0];
+  return Boolean(t0 && t1 && Math.hypot(t0.x - t1.x, t0.y - t1.y) > 20);
+}
+
+async function sampleAtlas(page, mode) {
+  const paints = atlasPaints()[mode].markers.map((marker) => ({
+    r: marker.r,
+    g: marker.g,
+    b: marker.b,
+    kind: marker.kind,
+    ambiguous: marker.ambiguous,
+    tol: marker.tol,
+  }));
+  return page.evaluate(
+    ({ mode: paintMode, paints: markerPaintsIn }) => {
+      const canvas = document.querySelector(
+        'canvas[aria-label="South Carolina historical marker atlas"]',
+      );
+      if (!canvas) return null;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      const width = canvas.width;
+      const height = canvas.height;
+      let pixels;
+      try {
+        pixels = ctx.getImageData(0, 0, width, height).data;
+      } catch (err) {
+        return { error: String(err) };
+      }
+      const dpr = width / canvas.clientWidth || 1;
+      const cell = Math.max(8, Math.round(14 * dpr));
+      const top = Math.round(130 * dpr);
+      const bottom = height - Math.round(130 * dpr);
+      const rightLimit = width - Math.round(64 * dpr);
+      const step = 2;
+      const diskR = Math.max(4, Math.round(5 * dpr));
+      const cells = new Map();
+      let lightCluster = 0;
+      let darkCluster = 0;
+      let pin = 0;
+      let raw = 0;
+
+      function distAt(x, y, paint) {
+        const j = (y * width + x) * 4;
+        return (
+          Math.abs(pixels[j] - paint.r) +
+          Math.abs(pixels[j + 1] - paint.g) +
+          Math.abs(pixels[j + 2] - paint.b)
+        );
+      }
+
+      function matchPaint(x, y) {
+        let best = null;
+        let bestD = Infinity;
+        for (const paint of markerPaintsIn) {
+          const d = distAt(x, y, paint);
+          if (d < paint.tol && d < bestD) {
+            best = paint;
+            bestD = d;
+          }
+        }
+        return best;
+      }
+
+      // A shore stroke, river, or label can share a pin fill. A pin or cluster
+      // is a filled disk; a stroke is not.
+      function diskLike(x, y, paint) {
+        let hit = 0;
+        let total = 0;
+        for (let dy = -diskR; dy <= diskR; dy += 1) {
+          for (let dx = -diskR; dx <= diskR; dx += 1) {
+            if (dx * dx + dy * dy > diskR * diskR) continue;
+            const xx = x + dx;
+            const yy = y + dy;
+            if (xx < 0 || yy < 0 || xx >= width || yy >= height) continue;
+            total += 1;
+            if (distAt(xx, yy, paint) < paint.tol) hit += 1;
+          }
+        }
+        return total > 0 && hit / total >= 0.7;
+      }
+
+      for (let y = top; y < bottom; y += step) {
+        for (let x = 0; x < rightLimit; x += step) {
+          const paint = matchPaint(x, y);
+          if (!paint) continue;
+          raw += 1;
+          if (paint.ambiguous && !diskLike(x, y, paint)) continue;
+          let kind;
+          if (paint.kind === "pin") {
+            kind = "pin";
+            pin += 1;
+          } else {
+            kind = "cluster";
+            if (paintMode === "dark") darkCluster += 1;
+            else lightCluster += 1;
+          }
+          const key = `${Math.floor(x / cell)},${Math.floor(y / cell)},${kind}`;
+          const bucket = cells.get(key) ?? {
+            kind,
+            n: 0,
+            x: 0,
+            y: 0,
+            confident: !paint.ambiguous,
+          };
+          bucket.n += 1;
+          bucket.x += x;
+          bucket.y += y;
+          bucket.confident = bucket.confident || !paint.ambiguous;
+          cells.set(key, bucket);
+        }
+      }
+
+      const targets = [...cells.values()]
+        .filter((bucket) => (bucket.kind === "cluster" ? bucket.n >= 8 : bucket.n >= 4))
+        .sort((a, b) => {
+          const rank = (bucket) => (bucket.kind === "cluster" ? (bucket.confident ? 0 : 1) : 2);
+          return rank(a) - rank(b) || b.n - a.n;
+        })
+        .slice(0, 12)
+        .map((bucket) => ({
+          kind: bucket.kind,
+          n: bucket.n,
+          confident: bucket.confident,
+          x: bucket.x / bucket.n / dpr,
+          y: bucket.y / bucket.n / dpr,
+        }));
+
+      return {
+        lightCluster,
+        darkCluster,
+        pin,
+        raw,
+        dpr,
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+        targets,
+      };
+    },
+    { mode, paints },
+  );
 }
 
 async function waitForAtlasPaint(page, mode) {
+  const paints = describePaints(mode);
   let last = null;
   for (let i = 0; i < 40; i++) {
-    last = await sampleAtlas(page);
+    last = await sampleAtlas(page, mode);
     const light = last?.lightCluster ?? 0;
     const dark = last?.darkCluster ?? 0;
     if (last && !last.error) {
       if (mode === "light" && light >= 80) return last;
-      // A light map can still match a few ink-cluster pixels. Dark mode has
-      // to clear that floor and drop the day greens.
       if (mode === "dark" && dark >= 400 && light < 80) return last;
     }
     await page.waitForTimeout(250);
   }
   throw new Error(
-    `marker pins or clusters did not render in ${mode} mode (lightCluster=${last?.lightCluster ?? 0}, darkCluster=${last?.darkCluster ?? 0}, pin=${last?.pin ?? 0}${last?.error ? `, ${last.error}` : ""})`,
+    `marker pins or clusters did not render in ${mode} mode (lightCluster=${last?.lightCluster ?? 0}, darkCluster=${last?.darkCluster ?? 0}, pin=${last?.pin ?? 0}, raw=${last?.raw ?? 0}, ${paints}${last?.error ? `, ${last.error}` : ""})`,
   );
 }
 
@@ -533,7 +897,7 @@ async function driveAtlas(page, shot, step) {
   const rendered = await check(step, "atlas: pins or clusters render", async () => {
     sampled = await waitForAtlasPaint(page, "light");
     await shot("01-atlas-loaded.png");
-    return `${sampled.lightCluster} light cluster pixels, ${sampled.targets.length} tap targets`;
+    return `${sampled.lightCluster} light cluster pixels, ${sampled.targets.length} tap targets; ${describePaints("light")}`;
   });
   if (!rendered) {
     await shot("fail-atlas-pins.png").catch(() => {});
@@ -544,7 +908,7 @@ async function driveAtlas(page, shot, step) {
     await page.getByRole("button", { name: "Switch to dark mode" }).click();
     const dark = await waitForAtlasPaint(page, "dark");
     await shot("01-atlas-dark.png");
-    return `${dark.darkCluster} dark cluster pixels`;
+    return `${dark.darkCluster} dark cluster pixels; ${describePaints("dark")}`;
   });
   if (!darkened) {
     await shot("fail-atlas-dark.png").catch(() => {});
@@ -554,7 +918,7 @@ async function driveAtlas(page, shot, step) {
   const restored = await check(step, "atlas: switch to light mode", async () => {
     await page.getByRole("button", { name: "Switch to light mode" }).click();
     sampled = await waitForAtlasPaint(page, "light");
-    return `${sampled.lightCluster} light cluster pixels`;
+    return `${sampled.lightCluster} light cluster pixels; ${describePaints("light")}`;
   });
   if (!restored) {
     await shot("fail-atlas-light.png").catch(() => {});
@@ -565,7 +929,8 @@ async function driveAtlas(page, shot, step) {
     let preview = null;
     const attempts = [];
     const missed = [];
-    for (let n = 0; n < 10 && !preview; n++) {
+    let sample = sampled;
+    for (let n = 0; n < 12 && !preview; n++) {
       const stackButton = await readStack(page);
       if (stackButton) {
         const label = (await stackButton.innerText()).replace(/\s+/g, " ").trim();
@@ -576,7 +941,7 @@ async function driveAtlas(page, shot, step) {
         if (preview) break;
         continue;
       }
-      const sample = n === 0 ? sampled : await sampleAtlas(page);
+      if (n > 0) sample = await sampleAtlas(page, "light");
       const target = sample?.targets?.find(
         (candidate) =>
           !missed.some((prior) => Math.hypot(prior.x - candidate.x, prior.y - candidate.y) < 28),
@@ -586,15 +951,32 @@ async function driveAtlas(page, shot, step) {
         break;
       }
       const click = await clickAtlasTarget(page, target);
-      attempts.push(
-        click.clicked
-          ? `${target.kind}@${Math.round(target.x)},${Math.round(target.y)}`
-          : `blocked:${click.hit?.stack ?? click.hit?.tag ?? "none"}`,
-      );
-      if (!click.clicked) missed.push(target);
+      const where = `${target.kind}@${Math.round(target.x)},${Math.round(target.y)}`;
+      if (!click.clicked) {
+        attempts.push(`blocked:${click.hit?.stack ?? click.hit?.tag ?? "none"}`);
+        missed.push(target);
+        continue;
+      }
       await page.waitForTimeout(1100);
       preview = await readMarkerPreview(page);
-      if (!preview) missed.push(target);
+      if (preview) {
+        attempts.push(where);
+        break;
+      }
+      const openedStack = await readStack(page);
+      if (openedStack) {
+        attempts.push(`${where}→stack`);
+        continue;
+      }
+      const after = await sampleAtlas(page, "light");
+      const repeats = attempts.filter((item) => item.startsWith(where)).length;
+      if (!atlasMoved(sample, after) || repeats >= 3) {
+        attempts.push(`${where}→miss`);
+        missed.push(target);
+      } else {
+        attempts.push(`${where}→zoom`);
+        sample = after;
+      }
     }
     if (!preview) {
       await shot("fail-atlas-tap.png");
@@ -1028,7 +1410,19 @@ async function main() {
   process.exit(process.exitCode ?? 0);
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+function invokedDirectly() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return fileURLToPath(import.meta.url) === resolve(entry);
+  } catch {
+    return false;
+  }
+}
+
+if (invokedDirectly()) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}
