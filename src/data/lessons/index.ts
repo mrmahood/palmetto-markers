@@ -93,6 +93,53 @@ import { charlestonLessonsAE } from "./charleston-ae";
 import { charlestonLessonsAF } from "./charleston-af";
 import { charlestonLessonsAG } from "./charleston-ag";
 import { charlestonLessonsAH } from "./charleston-ah";
+import { greenvilleLessonsA } from "./greenville-a";
+import { greenvilleLessonsB } from "./greenville-b";
+import { greenvilleLessonsC } from "./greenville-c";
+import { greenvilleLessonsD } from "./greenville-d";
+import { greenvilleLessonsE } from "./greenville-e";
+import { greenvilleLessonsF } from "./greenville-f";
+import { greenvilleLessonsG } from "./greenville-g";
+import { greenvilleLessonsH } from "./greenville-h";
+import { greenvilleLessonsI } from "./greenville-i";
+import { greenvilleLessonsJ } from "./greenville-j";
+import { greenvilleLessonsK } from "./greenville-k";
+import { greenvilleLessonsL } from "./greenville-l";
+import { greenvilleLessonsM } from "./greenville-m";
+import { greenvilleLessonsN } from "./greenville-n";
+import { greenvilleLessonsO } from "./greenville-o";
+import { greenvilleLessonsP } from "./greenville-p";
+import { greenvilleLessonsQ } from "./greenville-q";
+import { greenvilleLessonsR } from "./greenville-r";
+import { greenvilleLessonsS } from "./greenville-s";
+import { greenvilleLessonsT } from "./greenville-t";
+import { greenvilleLessonsU } from "./greenville-u";
+import { greenvilleLessonsV } from "./greenville-v";
+import { greenvilleLessonsW } from "./greenville-w";
+import { greenvilleLessonsX } from "./greenville-x";
+import { darlingtonLessonsA } from "./darlington-a";
+import { darlingtonLessonsB } from "./darlington-b";
+import { darlingtonLessonsC } from "./darlington-c";
+import { darlingtonLessonsD } from "./darlington-d";
+import { darlingtonLessonsE } from "./darlington-e";
+import { darlingtonLessonsF } from "./darlington-f";
+import { darlingtonLessonsG } from "./darlington-g";
+import { darlingtonLessonsH } from "./darlington-h";
+import { darlingtonLessonsI } from "./darlington-i";
+import { darlingtonLessonsJ } from "./darlington-j";
+import { darlingtonLessonsK } from "./darlington-k";
+import { darlingtonLessonsL } from "./darlington-l";
+import { darlingtonLessonsM } from "./darlington-m";
+import { darlingtonLessonsN } from "./darlington-n";
+import { darlingtonLessonsO } from "./darlington-o";
+import { darlingtonLessonsP } from "./darlington-p";
+import { darlingtonLessonsQ } from "./darlington-q";
+import { darlingtonLessonsR } from "./darlington-r";
+import { darlingtonLessonsS } from "./darlington-s";
+import { darlingtonLessonsT } from "./darlington-t";
+import { darlingtonLessonsU } from "./darlington-u";
+import { darlingtonLessonsV } from "./darlington-v";
+import { darlingtonLessonsW } from "./darlington-w";
 
 const LESSONS: Record<string, MarkerLesson> = {
   [pennLesson.markerId]: pennLesson,
@@ -192,6 +239,53 @@ for (const lesson of [
   ...charlestonLessonsAF,
   ...charlestonLessonsAG,
   ...charlestonLessonsAH,
+  ...greenvilleLessonsA,
+  ...greenvilleLessonsB,
+  ...greenvilleLessonsC,
+  ...greenvilleLessonsD,
+  ...greenvilleLessonsE,
+  ...greenvilleLessonsF,
+  ...greenvilleLessonsG,
+  ...greenvilleLessonsH,
+  ...greenvilleLessonsI,
+  ...greenvilleLessonsJ,
+  ...greenvilleLessonsK,
+  ...greenvilleLessonsL,
+  ...greenvilleLessonsM,
+  ...greenvilleLessonsN,
+  ...greenvilleLessonsO,
+  ...greenvilleLessonsP,
+  ...greenvilleLessonsQ,
+  ...greenvilleLessonsR,
+  ...greenvilleLessonsS,
+  ...greenvilleLessonsT,
+  ...greenvilleLessonsU,
+  ...greenvilleLessonsV,
+  ...greenvilleLessonsW,
+  ...greenvilleLessonsX,
+  ...darlingtonLessonsA,
+  ...darlingtonLessonsB,
+  ...darlingtonLessonsC,
+  ...darlingtonLessonsD,
+  ...darlingtonLessonsE,
+  ...darlingtonLessonsF,
+  ...darlingtonLessonsG,
+  ...darlingtonLessonsH,
+  ...darlingtonLessonsI,
+  ...darlingtonLessonsJ,
+  ...darlingtonLessonsK,
+  ...darlingtonLessonsL,
+  ...darlingtonLessonsM,
+  ...darlingtonLessonsN,
+  ...darlingtonLessonsO,
+  ...darlingtonLessonsP,
+  ...darlingtonLessonsQ,
+  ...darlingtonLessonsR,
+  ...darlingtonLessonsS,
+  ...darlingtonLessonsT,
+  ...darlingtonLessonsU,
+  ...darlingtonLessonsV,
+  ...darlingtonLessonsW,
 ]) {
   LESSONS[lesson.markerId] = lesson;
 }
