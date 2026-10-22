@@ -4,13 +4,38 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 import { BottomNav } from "@/components/bottom-nav";
 import { TOURS } from "@/data/tours";
 import { ERA_LABEL, heroImage } from "@/lib/markers";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_NAME,
+  SITE_ORIGIN,
+  shareMetaDescriptors,
+  tourPageShare,
+} from "@/lib/share-meta";
 import { useAppStore } from "@/store/app-store";
 
-export const Route = createFileRoute("/tours/$id")({ component: TourDetail });
+export const Route = createFileRoute("/tours/$id")({
+  loader: ({ params }) => ({ tour: TOURS.find((t) => t.id === params.id) ?? null }),
+  head: ({ loaderData, params }) => {
+    const tour = loaderData?.tour;
+    if (!tour) {
+      return {
+        meta: shareMetaDescriptors({
+          title: SITE_NAME,
+          description: DEFAULT_DESCRIPTION,
+          url: `${SITE_ORIGIN}/tours/${encodeURIComponent(params.id)}`,
+          type: "article",
+          image: DEFAULT_OG_IMAGE,
+        }),
+      };
+    }
+    return { meta: shareMetaDescriptors(tourPageShare(tour, params.id)) };
+  },
+  component: TourDetail,
+});
 
 function TourDetail() {
-  const { id } = Route.useParams();
-  const tour = TOURS.find((t) => t.id === id);
+  const { tour } = Route.useLoaderData();
   const load = useAppStore((s) => s.load);
   const markers = useAppStore((s) => s.markers);
 
@@ -56,9 +81,7 @@ function TourDetail() {
         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
           {tour.region} · {stops.length} markers
         </p>
-        <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">
-          {tour.title}
-        </h1>
+        <h1 className="mt-1 font-display text-3xl font-medium tracking-tight">{tour.title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">{tour.blurb}</p>
       </header>
       <ol className="mt-6 divide-y divide-border border-y border-border">

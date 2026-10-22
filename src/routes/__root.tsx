@@ -2,9 +2,8 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { ThemeSync } from "@/components/theme-toggle";
+import { shareMetaDescriptors, siteShare } from "@/lib/share-meta";
 import appCss from "../styles.css?url";
-
-const APP_NAME = "Palmetto Markers";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,15 +11,9 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content:
-          "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
       },
-      { title: APP_NAME },
-      {
-        name: "description",
-        content:
-          "A field guide to every official South Carolina historical marker — map, spoken lessons, and plaque scan.",
-      },
+      ...shareMetaDescriptors(siteShare()),
       { name: "theme-color", content: "#ffffff" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
     ],
