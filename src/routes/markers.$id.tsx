@@ -6,15 +6,23 @@ import { LessonPlayer } from "@/components/lessons/LessonPlayer";
 import { lessonFor } from "@/data/lessons";
 import { SuggestPlate } from "@/components/suggest-plate";
 import { Button } from "@/components/ui/button";
+import { loadMarkerRecord } from "@/lib/marker-record";
 import {
   ERA_LABEL,
-  getMarker,
+  heroImage,
   platesFor,
   inscription,
   spokenLesson,
-  type Marker,
   type Plate,
 } from "@/lib/markers";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_OG_IMAGE,
+  SITE_NAME,
+  SITE_ORIGIN,
+  markerPageShare,
+  shareMetaDescriptors,
+} from "@/lib/share-meta";
 import { listAcceptedPlates } from "@/lib/sources";
 import { directionsUrl } from "@/lib/geo";
 import { playLesson, stopSpeaking, unlockSpeech } from "@/lib/speech";
@@ -22,7 +30,27 @@ import { NARRATORS, getNarrator, type NarratorId } from "@/lib/voices";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app-store";
 
-export const Route = createFileRoute("/markers/$id")({ component: MarkerLesson });
+export const Route = createFileRoute("/markers/$id")({
+  loader: async ({ params }) => ({ marker: await loadMarkerRecord({ data: params.id }) }),
+  head: ({ loaderData, params }) => {
+    const marker = loaderData?.marker;
+    if (!marker) {
+      return {
+        meta: shareMetaDescriptors({
+          title: SITE_NAME,
+          description: DEFAULT_DESCRIPTION,
+          url: `${SITE_ORIGIN}/markers/${encodeURIComponent(params.id)}`,
+          type: "article",
+          image: DEFAULT_OG_IMAGE,
+        }),
+      };
+    }
+    return {
+      meta: shareMetaDescriptors(markerPageShare(marker, heroImage(marker), params.id)),
+    };
+  },
+  component: MarkerLesson,
+});
 
 function mergePlates(accepted: Plate[], builtin: Plate[]): Plate[] {
   const all = [...accepted, ...builtin];
@@ -31,13 +59,13 @@ function mergePlates(accepted: Plate[], builtin: Plate[]): Plate[] {
 
 function MarkerLesson() {
   const { id } = Route.useParams();
+  const { marker } = Route.useLoaderData();
   const load = useAppStore((s) => s.load);
   const markVisited = useAppStore((s) => s.markVisited);
   const favorites = useAppStore((s) => s.favorites);
   const toggleFavorite = useAppStore((s) => s.toggleFavorite);
   const narrator = useAppStore((s) => s.narrator);
   const setNarrator = useAppStore((s) => s.setNarrator);
-  const [marker, setMarker] = useState<Marker | undefined>();
   const [accepted, setAccepted] = useState<Plate[]>([]);
   const [playing, setPlaying] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -49,9 +77,6 @@ function MarkerLesson() {
 
   useEffect(() => {
     let live = true;
-    void getMarker(id).then((m) => {
-      if (live) setMarker(m);
-    });
     void listAcceptedPlates({ data: id })
       .then((rows) => {
         if (live) setAccepted(rows);
@@ -73,8 +98,11 @@ function MarkerLesson() {
 
   if (!marker) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-background text-sm text-muted">
-        Loading lesson…
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-background px-6 text-sm text-muted">
+        <p>Marker not found.</p>
+        <Link to="/" className="text-accent">
+          Back to map
+        </Link>
       </main>
     );
   }
@@ -153,16 +181,12 @@ function MarkerLesson() {
         ) : null}
         <p className="mt-2 flex items-start gap-1.5 text-sm text-muted">
           <MapPin className="mt-0.5 size-4 shrink-0" />
-          {[current.addr, current.city, `${current.county} County`]
-            .filter(Boolean)
-            .join(" · ")}
+          {[current.addr, current.city, `${current.county} County`].filter(Boolean).join(" · ")}
         </p>
       </header>
 
       <div className="mt-5 px-4">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-          Narrator
-        </p>
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Narrator</p>
         <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
           {NARRATORS.map((n) => {
             const on = narrator === n.id;
@@ -183,18 +207,12 @@ function MarkerLesson() {
             );
           })}
         </div>
-        <p className="mt-1.5 text-xs leading-relaxed text-muted">
-          {getNarrator(narrator).blurb}
-        </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted">{getNarrator(narrator).blurb}</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 px-4">
         <Button onClick={toggleAudio} disabled={preparing && !playing}>
-          {playing && !preparing ? (
-            <Pause className="size-4" />
-          ) : (
-            <Volume2 className="size-4" />
-          )}
+          {playing && !preparing ? <Pause className="size-4" /> : <Volume2 className="size-4" />}
           {preparing ? "Tuning voice…" : playing ? "Stop audio" : "Play lesson"}
         </Button>
         <a href={directionsUrl(current)} target="_blank" rel="noreferrer">
@@ -218,15 +236,13 @@ function MarkerLesson() {
             {current.back}
           </p>
         ) : null}
-        {!text ? (
-          <p className="mt-3 text-sm text-muted">No inscription recorded.</p>
-        ) : null}
+        {!text ? <p className="mt-3 text-sm text-muted">No inscription recorded.</p> : null}
         {current.sponsor ? (
           <p className="mt-5 text-xs text-muted">Sponsored by {current.sponsor}.</p>
         ) : null}
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          Inscription from the South Carolina Historical Marker Program, South
-          Carolina Department of Archives and History.
+          Inscription from the South Carolina Historical Marker Program, South Carolina Department
+          of Archives and History.
         </p>
       </article>
 
@@ -238,14 +254,11 @@ function MarkerLesson() {
         <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
           Historical plate
         </h2>
-        {plate.caption ? (
-          <p className="mt-2 text-sm leading-relaxed">{plate.caption}</p>
-        ) : null}
+        {plate.caption ? <p className="mt-2 text-sm leading-relaxed">{plate.caption}</p> : null}
         <p className="mt-1 text-xs leading-relaxed text-muted">{plate.credit}</p>
         {!plate.exact ? (
           <p className="mt-2 text-xs leading-relaxed text-muted">
-            Related, not a photograph of this marker’s subject. We do not invent
-            faces or scenes.
+            Related, not a photograph of this marker’s subject. We do not invent faces or scenes.
           </p>
         ) : null}
         {plates.length > 1 ? (

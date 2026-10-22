@@ -111,9 +111,7 @@ export function publicAppHost(hostHeader) {
  * app — Envoy rewrites it to `*.vercel.app`.
  */
 export function resolvePublicHost(hostHeader) {
-  return (
-    publicAppHost(process.env?.VITE_PUBLIC_HOSTNAME) || publicAppHost(hostHeader)
-  );
+  return publicAppHost(process.env?.VITE_PUBLIC_HOSTNAME) || publicAppHost(hostHeader);
 }
 
 export function isInstallQuery(url) {
@@ -299,8 +297,12 @@ export function ogServiceUrl() {
 }
 
 export function titleFromDocument(html) {
-  const match = String(html ?? "").match(/<title\b[^>]*>([^<]*)<\/title>/i);
-  return match ? unescapeHtml(match[1]).trim() : "";
+  // The last <title> wins so a child route's title overrides the document root
+  // when both are present. TanStack emits only the deepest title; this matches
+  // that and still prefers the page title if a parent tag leaked through.
+  const matches = [...String(html ?? "").matchAll(/<title\b[^>]*>([^<]*)<\/title>/gi)];
+  if (matches.length === 0) return "";
+  return unescapeHtml(matches[matches.length - 1][1]).trim();
 }
 
 export function resolveOgTitle(
@@ -329,7 +331,10 @@ export function siteHasCustomCard(site = {}) {
  * Otherwise empty — caller emits the og.grok.me placeholder.
  */
 export function resolveOgCardAsset(site = {}, cwd = process.cwd()) {
-  return ogCardPublicPath(cwd) || (detectCustomOgCard(cwd, site) ? String(site.image ?? "").trim() || "/og.jpg" : "");
+  return (
+    ogCardPublicPath(cwd) ||
+    (detectCustomOgCard(cwd, site) ? String(site.image ?? "").trim() || "/og.jpg" : "")
+  );
 }
 
 /** Stamp `card=custom` when public/og.jpg or public/og.png is on disk. */
@@ -346,7 +351,10 @@ export function grokOgHeadTags({
   documentTitle = "",
   cwd = process.cwd(),
 } = {}) {
-  const title = resolveOgTitle(site, appName, host, documentTitle);
+  // A page <title> is the share title. site.json title stays the fallback for
+  // documents that never set one (and still names the installed PWA).
+  const fromDocument = String(documentTitle ?? "").trim();
+  const title = fromDocument || resolveOgTitle(site, appName, host, "");
   const publicHost = resolvePublicHost(host);
   const tags = [
     `<meta name="twitter:card" content="summary_large_image">`,
@@ -435,15 +443,99 @@ export function normalizeHeadContext(ctx = {}) {
   };
 }
 
+/**
+ * Share tags a page may set. When present, they win over the site-wide card.
+ * og:title still follows the document <title> (one tag, child title last).
+ * twitter:card and the X game banner stay platform-owned.
+ */
+const PAGE_SHARE_KEYS = new Set([
+  "og:description",
+  "og:image",
+  "og:image:width",
+  "og:image:height",
+  "og:type",
+  "og:url",
+  "og:site_name",
+  "twitter:title",
+  "twitter:description",
+  "twitter:image",
+]);
+
+const SHARE_TAG_ORDER = [
+  "twitter:card",
+  "og:title",
+  "og:description",
+  "og:type",
+  "og:url",
+  "og:site_name",
+  "og:image",
+  "og:image:width",
+  "og:image:height",
+  "twitter:title",
+  "twitter:description",
+  "twitter:image",
+  "x:game:image",
+  "x:game:image:width",
+  "x:game:image:height",
+];
+
+/** Last meta tag for each share key, in document order. */
+export function shareMetaEntries(html) {
+  const map = new Map();
+  for (const tag of String(html ?? "").match(/<meta\b[^>]*>/gi) ?? []) {
+    const attr = tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i);
+    if (!attr) continue;
+    const key = attr[1].toLowerCase();
+    if (!SHARE_META_KEYS.has(key)) continue;
+    map.set(key, tag);
+  }
+  return map;
+}
+
+function metaContent(tag) {
+  const match = String(tag ?? "").match(/\bcontent\s*=\s*["']([^"']*)["']/i);
+  return match ? match[1] : "";
+}
+
+function composeShareTags(documentHtml, platformTags) {
+  const page = shareMetaEntries(documentHtml);
+  const platform = shareMetaEntries(platformTags.join(""));
+  const chosen = new Map(platform);
+  for (const key of PAGE_SHARE_KEYS) {
+    if (page.has(key)) chosen.set(key, page.get(key));
+  }
+  // Width and height belong to the platform card. A page image has its own size.
+  if (page.has("og:image")) {
+    if (!page.has("og:image:width")) chosen.delete("og:image:width");
+    if (!page.has("og:image:height")) chosen.delete("og:image:height");
+  }
+  const ogType = metaContent(chosen.get("og:type")).toLowerCase();
+  if (ogType && ogType !== "x:game") {
+    chosen.delete("x:game:image");
+    chosen.delete("x:game:image:width");
+    chosen.delete("x:game:image:height");
+  }
+  const tags = [];
+  const seen = new Set();
+  for (const key of SHARE_TAG_ORDER) {
+    if (!chosen.has(key)) continue;
+    tags.push(chosen.get(key));
+    seen.add(key);
+  }
+  for (const [key, tag] of chosen) {
+    if (!seen.has(key)) tags.push(tag);
+  }
+  return tags;
+}
+
 export function injectGrokPwaHead(html, ctx = {}) {
   if (typeof html !== "string") return html;
   const { site, projectId, creator, creatorId, host, cwd } = normalizeHeadContext(ctx);
   const documentTitle = titleFromDocument(html);
-  const appName = resolveOgTitle(
-    site,
-    ctx.appName ?? DEFAULT_APP_NAME,
-    host,
-    documentTitle,
+  const appName = resolveOgTitle(site, ctx.appName ?? DEFAULT_APP_NAME, host, documentTitle);
+  const shareTags = composeShareTags(
+    html,
+    grokOgHeadTags({ host, appName, site, documentTitle, cwd }),
   );
   let next = stripShareMetaTags(html);
   if (!readGrokExtensionsEnabled()) next = stripGrokExtensionsScript(next);
@@ -456,10 +548,7 @@ export function injectGrokPwaHead(html, ctx = {}) {
     })
     .map(([, tag]) => tag);
 
-  next = insertAfterHeadOpen(
-    next,
-    grokOgHeadTags({ host, appName, site, documentTitle, cwd }).join(""),
-  );
+  next = insertAfterHeadOpen(next, shareTags.join(""));
 
   if (readGrokExtensionsEnabled() && !next.includes("/grok-app-builder/extensions.js")) {
     missing.push(...grokExtensionsHeadTags(projectId));
@@ -493,7 +582,8 @@ function findHeadClose(buf) {
 
 /**
  * Streaming head injector: buffers only until `</head>` (ASCII marker; never
- * appears inside a UTF-8 continuation byte), overwrites share-card metas,
+ * appears inside a UTF-8 continuation byte), merges share-card metas (page
+ * tags override the site card; one og:title from the document title),
  * then passes later chunks through so streaming SSR keeps streaming.
  */
 export function createHeadInjector(ctx = {}) {
