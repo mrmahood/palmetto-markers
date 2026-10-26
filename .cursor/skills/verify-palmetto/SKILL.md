@@ -106,12 +106,17 @@ Scan proof, in order:
 
 The feature map lists lesson, explore, and tours as well. Drive those with the `--feature` commands above when a change touches them. A pass on atlas or scan does not cover those entry points. Recipes: [features/README.md](features/README.md).
 
+Lesson proof waits out a dropped `Next` tap the same way scan waits out a dropped camera tap: the click does nothing until the page has hydrated, and the part label can flash back to part 1 while the timeline finishes scrolling. The pass is a settled `Part 2 of`. After the Fort Mill page and that hands-on step, the proof reads the document response for `/markers/46-21`. That HTML is the shared-link preview: one `og:title` and title of `Fort Mill · Palmetto Markers`, the Fort Mill `og:url` and hero `og:image` on `https://palmettomarkers.grok.me`, and the matching Twitter card. It then opens Greenville `/markers/23-01` (`The Old Record Building`) and Darlington `/markers/16-02` (`David Rogerson Williams`) and advances each inscription lesson to part 2. Those counties use the same hands-on block as Fort Mill. The share check does not read or change robots tags.
+
+Tour proof, after Charleston Harbor opens, reads the document response for `/tours/charleston-harbor` the same way: title `Charleston Harbor · Palmetto Markers`, that tour’s `og:url` and image, and the matching Twitter card.
+
 ## Evidence
 
 Every `run` and `drive` writes to `verify-output/palmetto/` (override with `--out`). The directory is gitignored. Cleanup does not delete it.
 
 - `01-atlas-loaded.png`, `01-atlas-dark.png`, and `02-atlas-marker-details.png` through `07-scan-penn-07-15.png` for the required flows
-- `08-lesson-fort-mill.png`, `08-lesson-fort-mill-hands-on.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
+- `08-lesson-fort-mill.png`, `08-lesson-fort-mill-hands-on.png`, `12-lesson-greenville-23-01.png`, `13-lesson-darlington-16-02.png`, `09-explore-lowcountry.png`, `10-explore-lesson.png`, `11-tour-charleston-harbor.png` when those features run
+- Lesson and tour share-preview steps write their tag checks into `summary.json`. They do not add a screenshot.
 - `fail-<step>.png` when a step fails
 - `session.webm` unless `--no-video`
 - `summary.json` and a PASS/FAIL list on stdout

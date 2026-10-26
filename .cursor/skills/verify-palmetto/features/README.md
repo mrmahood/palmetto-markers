@@ -35,6 +35,6 @@ Each feature file starts with an H1 and one paragraph, then exactly four H2 sect
 
 - [Atlas](./atlas.md) covers the map on `/`: load, the light map and the dark-mode switch, rendered pins or clusters, and a tap that opens marker details.
 - [Scan](./scan.md) covers `/ar`: camera stays closed, Open camera, and plaque numbers `46-21`, `7-15`, and `07-15`.
-- [Lesson](./lesson.md) covers the marker page, Play lesson, and the hands-on inscription lesson.
+- [Lesson](./lesson.md) covers the marker page, Play lesson, the hands-on inscription lesson (Fort Mill, plus one Greenville and one Darlington lesson), and the server-rendered link preview for `/markers/46-21`.
 - [Explore](./explore.md) covers region filtering and opening a marker from the list.
-- [Tours](./tours.md) covers the tour list and opening Charleston Harbor.
+- [Tours](./tours.md) covers the tour list, opening Charleston Harbor, and that tour’s server-rendered link preview.

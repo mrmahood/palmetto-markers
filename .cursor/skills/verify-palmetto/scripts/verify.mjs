@@ -1129,6 +1129,107 @@ async function driveScan(page, shot, step) {
   }
 }
 
+function unescapeShareText(value) {
+  return String(value)
+    .replace(/&#(\d+);/g, (_, digits) => String.fromCodePoint(Number(digits)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+/** Tags a link-preview crawler would read from the document response. Ignores robots. */
+function shareTagsFromHtml(html) {
+  const metas = new Map();
+  for (const tag of String(html).match(/<meta\b[^>]*>/gi) ?? []) {
+    const keyMatch = tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i);
+    const contentMatch = tag.match(/\bcontent\s*=\s*["']([^"']*)["']/i);
+    if (!keyMatch || !contentMatch) continue;
+    const key = keyMatch[1].toLowerCase();
+    const list = metas.get(key) ?? [];
+    list.push(unescapeShareText(contentMatch[1]));
+    metas.set(key, list);
+  }
+  const titles = [...String(html).matchAll(/<title\b[^>]*>([^<]*)<\/title>/gi)].map((match) =>
+    unescapeShareText(match[1]).trim(),
+  );
+  return { metas, titles };
+}
+
+function expectShareValue(metas, key, expected) {
+  const values = metas.get(key) ?? [];
+  if (values.length !== 1 || values[0] !== expected) {
+    throw new Error(`${key}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(values)}`);
+  }
+}
+
+async function assertShareDocument(page, path, expected) {
+  const response = await page.goto(path, { waitUntil: "domcontentloaded", timeout: 45000 });
+  if (!response) throw new Error(`GET ${path} returned no document`);
+  if (!response.ok()) throw new Error(`GET ${path} returned ${response.status()}`);
+  const html = await response.text();
+  const { metas, titles } = shareTagsFromHtml(html);
+  if (titles.length !== 1 || titles[0] !== expected.title) {
+    throw new Error(`title: expected ${JSON.stringify(expected.title)}, got ${JSON.stringify(titles)}`);
+  }
+  expectShareValue(metas, "og:title", expected.title);
+  expectShareValue(metas, "og:type", "article");
+  expectShareValue(metas, "og:url", expected.url);
+  expectShareValue(metas, "og:image", expected.image);
+  expectShareValue(metas, "og:site_name", "Palmetto Markers");
+  expectShareValue(metas, "twitter:card", "summary_large_image");
+  expectShareValue(metas, "twitter:title", expected.title);
+  expectShareValue(metas, "twitter:image", expected.image);
+  const descriptions = metas.get("og:description") ?? [];
+  if (descriptions.length !== 1 || !descriptions[0].startsWith(expected.descriptionPrefix)) {
+    throw new Error(
+      `og:description: expected one value starting ${JSON.stringify(expected.descriptionPrefix)}, got ${JSON.stringify(descriptions)}`,
+    );
+  }
+  const twitterDescriptions = metas.get("twitter:description") ?? [];
+  if (twitterDescriptions.length !== 1 || twitterDescriptions[0] !== descriptions[0]) {
+    throw new Error(
+      `twitter:description: expected the same text as og:description, got ${JSON.stringify(twitterDescriptions)}`,
+    );
+  }
+  return expected.title;
+}
+
+async function advanceInscriptionToPart2(page) {
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  await next.scrollIntoViewIfNeeded();
+  const part = page.getByText(/Part \d+ of/).first();
+  let label = "";
+  for (let clicks = 0; clicks < 12; clicks++) {
+    label = ((await part.innerText().catch(() => "")) || "").replace(/\s+/g, " ").trim();
+    if (/^Part 2 of/.test(label)) return label;
+    if (/^Part [3-9] of/.test(label)) {
+      throw new Error(`Next moved the lesson to ${label}`);
+    }
+    await next.click();
+    // Hydration can drop the first tap. A smooth scroll can also flash part 1
+    // before the timeline settles, so read the label only after that motion.
+    await page.waitForTimeout(700);
+  }
+  throw new Error(`Part 2 of was not visible after Next (showing ${label || "no part label"})`);
+}
+
+async function assertInscriptionLesson(page, shot, { path, name, id, handsOnTitle, evidence }) {
+  await page.goto(path, { waitUntil: "domcontentloaded", timeout: 45000 });
+  await page.getByRole("heading", { level: 1, name, exact: true }).waitFor({ timeout: 15000 });
+  await page.getByText(id, { exact: false }).first().waitFor();
+  const title = page.getByRole("heading", { name: handsOnTitle, exact: true });
+  await title.scrollIntoViewIfNeeded();
+  await page.getByText(/hands-on lesson/i).first().waitFor();
+  await page.getByText(/Every fact is from the inscription\./).waitFor();
+  const part = await advanceInscriptionToPart2(page);
+  await shot(evidence);
+  return `${name} (${id}) advanced to ${part}`;
+}
+
 async function driveLesson(page, shot, step) {
   const opened = await check(step, "lesson: Fort Mill", async () => {
     await page.goto("/markers/46-21", { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -1139,20 +1240,47 @@ async function driveLesson(page, shot, step) {
     await shot("08-lesson-fort-mill.png");
     return "Fort Mill (46-21) shows Play lesson";
   });
-  if (!opened) return;
 
-  await check(step, "lesson: hands-on inscription", async () => {
-    const title = page.getByRole("heading", { name: "How Fort Mill got its name" });
-    await title.scrollIntoViewIfNeeded();
+  if (opened) {
+    await check(step, "lesson: hands-on inscription", async () => {
+      const title = page.getByRole("heading", { name: "How Fort Mill got its name" });
+      await title.scrollIntoViewIfNeeded();
     await page.getByText(/hands-on lesson/i).first().waitFor();
     await page.getByText(/Every fact is from the inscription\./).waitFor();
-    const next = page.getByRole("button", { name: "Next" });
-    await next.scrollIntoViewIfNeeded();
-    await next.click();
-    await page.getByText(/Part 2 of/).waitFor({ timeout: 8000 });
+    const part = await advanceInscriptionToPart2(page);
     await shot("08-lesson-fort-mill-hands-on.png");
-    return "How Fort Mill got its name advanced to part 2";
-  });
+    return `How Fort Mill got its name advanced to ${part}`;
+    });
+  }
+
+  await check(step, "lesson: Fort Mill share preview", async () =>
+    assertShareDocument(page, "/markers/46-21", {
+      title: "Fort Mill · Palmetto Markers",
+      url: "https://palmettomarkers.grok.me/markers/46-21",
+      image: "https://palmettomarkers.grok.me/images/hist/catawba-map.jpg",
+      descriptionPrefix: "Fort Mill — Fort Mill, York County.",
+    }),
+  );
+
+  await check(step, "lesson: Greenville inscription", async () =>
+    assertInscriptionLesson(page, shot, {
+      path: "/markers/23-01",
+      name: "The Old Record Building",
+      id: "23-01",
+      handsOnTitle: "County courthouse until 1855",
+      evidence: "12-lesson-greenville-23-01.png",
+    }),
+  );
+
+  await check(step, "lesson: Darlington inscription", async () =>
+    assertInscriptionLesson(page, shot, {
+      path: "/markers/16-02",
+      name: "David Rogerson Williams",
+      id: "16-02",
+      handsOnTitle: "Governor and a War of 1812 general",
+      evidence: "13-lesson-darlington-16-02.png",
+    }),
+  );
 }
 
 async function driveExplore(page, shot, step) {
@@ -1182,6 +1310,15 @@ async function driveTours(page, shot, step) {
     await shot("11-tour-charleston-harbor.png");
     return "Charleston Harbor tour opened";
   });
+
+  await check(step, "tours: Charleston Harbor share preview", async () =>
+    assertShareDocument(page, "/tours/charleston-harbor", {
+      title: "Charleston Harbor · Palmetto Markers",
+      url: "https://palmettomarkers.grok.me/tours/charleston-harbor",
+      image: "https://palmettomarkers.grok.me/images/era-revolution.jpg",
+      descriptionPrefix: "Charleston Harbor — Lowcountry.",
+    }),
+  );
 }
 
 const DRIVERS = {
